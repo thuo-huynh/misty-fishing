@@ -1,5 +1,5 @@
 -- Fishing Service: Roblox glue around FishingSession (one per player). Clients only send intents;
--- the server checks the cast, times the bite and hook window, and cancels on unequip, death or leave.
+-- the server checks the cast, times the bite and hook window, runs the reel (Tension) and cancels on unequip, death or leave.
 local Players = game:GetService("Players")
 local RS = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
@@ -8,6 +8,7 @@ local Lighting = game:GetService("Lighting")
 
 local Content = require(RS:WaitForChild("Content"))
 local Catch = require(RS:WaitForChild("Rules"):WaitForChild("Catch"))
+local Tension = require(RS:WaitForChild("Rules"):WaitForChild("Tension"))
 local PlayerProfile = require(script.Parent:WaitForChild("PlayerProfile"))
 local FishingSession = require(script.Parent:WaitForChild("FishingSession"))
 local ShopService = require(script.Parent:WaitForChild("ShopService"))
@@ -31,8 +32,9 @@ local function zoneAt(pos)
 end
 
 -- deps = { remotes = Folder, contentOk = boolean, notify = fn(player, text, color), sync = fn(player) }
--- Remotes: Cast (RemoteFunction, target Vector3 -> { ok, msg | zone }), Hook / Reel(success) / Cancel (client -> server),
--- State (server -> client: "bite" | "reeling", difficulty | "idle").
+-- Remotes: Cast (RemoteFunction, target Vector3 -> { ok, msg | zone }), Hook / Cancel (client -> server),
+-- Reel (client -> server: holding boolean; server -> client: tension 0..1, distance studs, every reel tick),
+-- State (server -> client: "bite" | "reeling" | "idle").
 function FishingService.start(deps)
 	local function remote(class, name)
 		local r = Instance.new(class)
@@ -47,7 +49,7 @@ function FishingService.start(deps)
 	local StateEv = remote("RemoteEvent", "State")
 
 	local function session(player)
-		sessions[player] = sessions[player] or FishingSession.new(Catch, catchContent)
+		sessions[player] = sessions[player] or FishingSession.new(Catch, Tension, catchContent)
 		return sessions[player]
 	end
 
@@ -74,6 +76,7 @@ function FishingService.start(deps)
 			bait = Content.baits[d.equipped.bait],
 			baitLeft = PlayerProfile.baitCount(player, d.equipped.bait),
 			rod = Content.rods[d.equipped.rod],
+			line = Content.lines[d.equipped.line],
 			hour = Lighting.ClockTime,
 		}, os.clock(), math.random)
 		if not ok then return { ok = false, msg = msg } end
@@ -85,18 +88,17 @@ function FishingService.start(deps)
 	HookEv.OnServerEvent:Connect(function(player)
 		local s = sessions[player]
 		if not s or not FishingSession.allow(s, os.clock()) then return end
-		if not FishingSession.hook(s, os.clock()) then return end -- too early or too late: update() handles the escape
-		local d = PlayerProfile.get(player)
-		if not d then return cancel(player) end
-		local rod = Content.rods[d.equipped.rod]
-		StateEv:FireClient(player, "reeling", s.fish.difficulty + math.min(3, s.kg / rod.maxKg * 1.5))
+		if not FishingSession.hook(s, os.clock(), math.random) then return end -- too early or too late: update() handles the miss
+		StateEv:FireClient(player, "reeling")
 	end)
 
-	ReelEv.OnServerEvent:Connect(function(player, success)
+	ReelEv.OnServerEvent:Connect(function(player, holding)
 		local s = sessions[player]
 		if not s or s.state ~= "reeling" or not FishingSession.allow(s, os.clock()) then return end
-		local c = FishingSession.finishReel(s, os.clock(), success)
-		if not c then return deps.notify(player, "The fish got away...", Color3.fromRGB(255, 140, 90)) end
+		FishingSession.reel(s, holding)
+	end)
+
+	local function landed(player, c)
 		local added, record = PlayerProfile.addCatch(player, { species = c.fish.id, kg = c.kg, zone = c.zone, time = os.time() })
 		if not added then
 			return deps.notify(player, "Bag full! Sell your fish first. (fish released)", Color3.fromRGB(255, 90, 90))
@@ -105,7 +107,7 @@ function FishingService.start(deps)
 		deps.notify(player, string.format("%s %s - %.2f kg (%d coins)%s", r.name, c.fish.name, c.kg, Catch.sellPrice(c.fish, c.kg),
 			record and "  NEW RECORD!" or ""), Color3.fromRGB(table.unpack(r.color)))
 		deps.sync(player)
-	end)
+	end
 
 	CancelEv.OnServerEvent:Connect(function(player)
 		local s = sessions[player]
@@ -115,12 +117,24 @@ function FishingService.start(deps)
 	RunService.Heartbeat:Connect(function()
 		local now = os.clock()
 		for player, s in sessions do
-			local event = FishingSession.update(s, now)
+			local bait = s.bait
+			local event, c = FishingSession.update(s, now)
 			if event == "bite" then
 				StateEv:FireClient(player, "bite")
-			elseif event == "escaped" then
+			elseif event == "tick" then
+				ReelEv:FireClient(player, s.reel.tension, s.reel.distance)
+			elseif event then
 				StateEv:FireClient(player, "idle")
-				deps.notify(player, "Too slow - it got away.", Color3.fromRGB(255, 140, 90))
+				if event == "landed" then
+					landed(player, c)
+				elseif event == "snapped" then
+					-- the Bait was used up at the cast; a snap is where the player feels it
+					deps.notify(player, if bait.price > 0 then `Line snapped! Lost your {bait.name}.` else "Line snapped!",
+						Color3.fromRGB(255, 90, 90))
+				else
+					deps.notify(player, if event == "missed" then "Too slow - it got away." else "The fish got away...",
+						Color3.fromRGB(255, 140, 90))
+				end
 			end
 		end
 	end)

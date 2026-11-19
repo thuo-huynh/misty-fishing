@@ -7,6 +7,7 @@ local CollectionService = game:GetService("CollectionService")
 local Lighting = game:GetService("Lighting")
 
 local Content = require(RS:WaitForChild("Content"))
+local ReelUI = require(script.Parent:WaitForChild("ReelUI"))
 local remotes = RS:WaitForChild("FishingRemotes")
 local CastFn = remotes:WaitForChild("Cast")
 local ReelEv = remotes:WaitForChild("Reel")
@@ -22,7 +23,7 @@ local NotifyEv = remotes:WaitForChild("Notify")
 local player = Players.LocalPlayer
 local myData = nil
 local state = "idle" -- idle | casting | waiting | bite | reeling
-local cast = nil     -- { difficulty, basePos, bobber }; the server owns the real state
+local cast = nil     -- { basePos, bobber }; the server owns the real state
 
 ---------------------------------------------------------------- UI
 local gui = Instance.new("ScreenGui")
@@ -66,26 +67,7 @@ local message = make("TextLabel", { Size = UDim2.new(0.8, 0, 0, 40), Position = 
 	BackgroundTransparency = 1, TextColor3 = Color3.new(1, 1, 1), TextStrokeTransparency = 0.3,
 	Font = Enum.Font.GothamBlack, TextSize = 26, Text = "", TextWrapped = true }, gui)
 
--- reel minigame
-local reelFrame = make("Frame", { Size = UDim2.fromOffset(420, 70), Position = UDim2.new(0.5, -210, 1, -170),
-	BackgroundColor3 = Color3.fromRGB(15, 25, 40), BackgroundTransparency = 0.2, Visible = false }, gui)
-corner(reelFrame)
-local track = make("Frame", { Size = UDim2.new(1, -20, 0, 30), Position = UDim2.fromOffset(10, 8),
-	BackgroundColor3 = Color3.fromRGB(40, 70, 110) }, reelFrame)
-corner(track)
-local zoneBar = make("Frame", { Size = UDim2.fromScale(0.25, 1), BackgroundColor3 = Color3.fromRGB(70, 220, 110),
-	BackgroundTransparency = 0.3 }, track)
-corner(zoneBar)
-local fishIcon = make("TextLabel", { Size = UDim2.fromOffset(24, 30), AnchorPoint = Vector2.new(0.5, 0),
-	BackgroundTransparency = 1, Text = "><>", TextColor3 = Color3.fromRGB(255, 230, 90), Font = Enum.Font.GothamBlack, TextSize = 16 }, track)
-local progBack = make("Frame", { Size = UDim2.new(1, -20, 0, 12), Position = UDim2.fromOffset(10, 48),
-	BackgroundColor3 = Color3.fromRGB(60, 60, 60) }, reelFrame)
-corner(progBack)
-local progBar = make("Frame", { Size = UDim2.fromScale(0.3, 1), BackgroundColor3 = Color3.fromRGB(255, 200, 60) }, progBack)
-corner(progBar)
-make("TextLabel", { Size = UDim2.new(1, 0, 0, 20), Position = UDim2.fromOffset(0, -22), BackgroundTransparency = 1,
-	Text = "Hold click / touch / Space to keep the fish in the green zone", TextColor3 = Color3.new(1, 1, 1),
-	TextStrokeTransparency = 0.4, Font = Enum.Font.GothamBold, TextSize = 14 }, reelFrame)
+local reelUI = ReelUI.mount(gui)
 
 -- collection panel
 local collPanel = make("Frame", { Size = UDim2.new(0, 380, 0.7, 0), Position = UDim2.new(0.5, -190, 0.15, 0),
@@ -226,18 +208,16 @@ local function getRod()
 	return char and char:FindFirstChild("FishingRod")
 end
 
+local holding = false -- reel button down; sent to the server on change
+
 local function cleanup()
 	if cast then
 		if cast.bobber then cast.bobber:Destroy() end
 		cast = nil
 	end
-	reelFrame.Visible = false
+	reelUI.hide()
+	holding = false
 	state = "idle"
-end
-
-local function fail()
-	if state == "reeling" then ReelEv:FireServer(false) end
-	cleanup()
 end
 
 local function spawnBobber(pos)
@@ -254,16 +234,20 @@ local function spawnBobber(pos)
 	return bobber
 end
 
-local reel = { zone = 0, vel = 0, fish = 0.5, target = 0.5, nextMove = 0, progress = 0.3, holding = false }
-
-local function startReel(difficulty)
+local function startReel()
 	state = "reeling"
-	cast.difficulty = difficulty
-	local power = Content.rods[myData and myData.equipped.rod or "basic"].power
-	reel.zone, reel.vel, reel.fish, reel.target, reel.nextMove, reel.progress = 0.5 - power / 2, 0, 0.5, 0.5, 0, 0.3
-	zoneBar.Size = UDim2.fromScale(power, 1)
-	reelFrame.Visible = true
+	reelUI.show()
 	showMessage("Hooked! Reel it in!", Color3.fromRGB(120, 255, 140))
+end
+
+ReelEv.OnClientEvent:Connect(function(tension, distance)
+	if state == "reeling" then reelUI.set(tension, distance) end
+end)
+
+local function setHolding(h)
+	if state ~= "reeling" or h == holding then return end
+	holding = h
+	ReelEv:FireServer(h)
 end
 
 RunService.RenderStepped:Connect(function(dt)
@@ -271,40 +255,6 @@ RunService.RenderStepped:Connect(function(dt)
 		local base = cast.basePos
 		local dip = state == "bite" and -0.8 or 0 -- sinks on a bite
 		cast.bobber.Position = base + Vector3.new(0, math.sin(os.clock() * 3) * 0.08 + dip, 0)
-	end
-	if state ~= "reeling" or not cast then return end
-	if not getRod() then return fail() end
-
-	local power = Content.rods[myData and myData.equipped.rod or "basic"].power
-	local d = cast.difficulty
-	-- green zone: push right while holding, falls back left otherwise
-	reel.vel += (reel.holding and 2.2 or -2.2) * dt
-	reel.vel = math.clamp(reel.vel, -1.2, 1.2)
-	reel.zone += reel.vel * dt
-	if reel.zone < 0 then reel.zone, reel.vel = 0, 0 end
-	if reel.zone > 1 - power then reel.zone, reel.vel = 1 - power, 0 end
-	-- fish darts to random targets; harder fish move faster and more often
-	reel.nextMove -= dt
-	if reel.nextMove <= 0 then
-		reel.target = math.random()
-		reel.nextMove = (0.4 + math.random() * 1.4) / (0.6 + d * 0.2)
-	end
-	local speed = 0.15 + d * 0.09
-	local diff = reel.target - reel.fish
-	reel.fish += math.clamp(diff, -speed * dt, speed * dt)
-
-	local inside = reel.fish >= reel.zone and reel.fish <= reel.zone + power
-	reel.progress += (inside and 0.35 / (1 + d * 0.12) or -0.2) * dt
-	zoneBar.Position = UDim2.fromScale(reel.zone, 0)
-	zoneBar.BackgroundColor3 = inside and Color3.fromRGB(70, 220, 110) or Color3.fromRGB(220, 90, 70)
-	fishIcon.Position = UDim2.fromScale(reel.fish, 0)
-	progBar.Size = UDim2.fromScale(math.clamp(reel.progress, 0, 1), 1)
-
-	if reel.progress >= 1 then
-		ReelEv:FireServer(true)
-		cleanup()
-	elseif reel.progress <= 0 then
-		fail()
 	end
 end)
 
@@ -334,14 +284,14 @@ end
 local biteSound = make("Sound", { SoundId = "rbxasset://sounds/electronicpingshort.wav", Volume = 1 }, gui)
 
 -- the server decides every transition; the client only shows it
-StateEv.OnClientEvent:Connect(function(newState, difficulty)
+StateEv.OnClientEvent:Connect(function(newState)
 	if not cast then return end
 	if newState == "bite" and state == "waiting" then
 		state = "bite"
 		biteSound:Play()
 		showMessage("BITE! Click now!", Color3.fromRGB(255, 230, 60))
 	elseif newState == "reeling" then
-		startReel(difficulty)
+		startReel()
 	elseif newState == "idle" then
 		cleanup()
 	end
@@ -353,7 +303,7 @@ local function isPress(input)
 end
 
 UIS.InputBegan:Connect(function(input, processed)
-	if state == "reeling" and isPress(input) then reel.holding = true return end
+	if state == "reeling" and isPress(input) then return setHolding(true) end
 	if processed then return end
 	if input.KeyCode == Enum.KeyCode.C then return toggleCollection() end
 	if input.KeyCode == Enum.KeyCode.B then return cycle("baits") end
@@ -368,7 +318,7 @@ UIS.InputBegan:Connect(function(input, processed)
 end)
 
 UIS.InputEnded:Connect(function(input)
-	if isPress(input) then reel.holding = false end
+	if isPress(input) then setHolding(false) end
 end)
 
 -- unequip, death and leave are cancelled by the server (State "idle"); a new character just clears the old bobber
