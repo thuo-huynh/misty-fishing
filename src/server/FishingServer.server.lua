@@ -3,13 +3,12 @@ local Players = game:GetService("Players")
 local RS = game:GetService("ReplicatedStorage")
 local ServerStorage = game:GetService("ServerStorage")
 local CollectionService = game:GetService("CollectionService")
-local DataStoreService = game:GetService("DataStoreService")
 local Lighting = game:GetService("Lighting")
 local HttpService = game:GetService("HttpService")
 
 local Content = require(RS:WaitForChild("Content"))
+local PlayerProfile = require(script.Parent:WaitForChild("PlayerProfile"))
 local Balance = Content.balance
-local store = DataStoreService:GetDataStore("FishingData_v1")
 
 local remotes = Instance.new("Folder")
 remotes.Name = "FishingRemotes"
@@ -26,34 +25,19 @@ local SyncEv = remote("RemoteEvent", "Sync")
 local NotifyEv = remote("RemoteEvent", "Notify")
 remotes.Parent = RS
 
-local data = {}      -- [player] = save table
-local canSave = {}   -- [player] = true only if load succeeded (never overwrite a save we failed to read)
 local pending = {}   -- [player] = current cast
 
 ---------------------------------------------------------------- data
-local function defaultData()
-	return { money = 0, rods = { basic = true }, rod = "basic", baits = {}, bait = "worm", bag = {}, collection = {} }
-end
-
 local function sync(player)
-	local d = data[player]
+	local d = PlayerProfile.get(player)
 	if not d then return end
 	local ls = player:FindFirstChild("leaderstats")
-	if ls then ls.Money.Value = d.money end
+	if ls then ls.Coins.Value = d.coins end
 	SyncEv:FireClient(player, d)
 end
 
 local function notify(player, text, color)
 	NotifyEv:FireClient(player, text, color)
-end
-
-local function save(player)
-	local d = data[player]
-	if not d or not canSave[player] then return end
-	local ok, err = pcall(function()
-		store:SetAsync("u_" .. player.UserId, d)
-	end)
-	if not ok then warn("Save failed for", player.Name, err) end
 end
 
 local function giveRod(player)
@@ -86,50 +70,28 @@ local function giveRod(player)
 	tool.Parent = backpack
 end
 
-Players.PlayerAdded:Connect(function(player)
+local function onPlayerAdded(player)
+	if not PlayerProfile.load(player) then return end -- kicked with a message; old data untouched
+
 	local ls = Instance.new("Folder")
 	ls.Name = "leaderstats"
-	local money = Instance.new("IntValue")
-	money.Name = "Money"
-	money.Parent = ls
+	local coins = Instance.new("IntValue")
+	coins.Name = "Coins"
+	coins.Parent = ls
 	ls.Parent = player
-
-	local ok, saved = pcall(function()
-		return store:GetAsync("u_" .. player.UserId)
-	end)
-	local d = defaultData()
-	if ok then
-		canSave[player] = true
-		if type(saved) == "table" then
-			for k, v in pairs(saved) do d[k] = v end
-		end
-	else
-		warn("Load failed for", player.Name, "- progress will not be saved this session")
-	end
-	if not Content.rods[d.rod] then d.rod = "basic" end
-	if not Content.baits[d.bait] then d.bait = "worm" end
-	data[player] = d
 
 	player.CharacterAdded:Connect(function() giveRod(player) end)
 	if player.Character then giveRod(player) end
 	sync(player)
-	if not canSave[player] then notify(player, "Data could not load - progress will NOT be saved.", Color3.fromRGB(255, 90, 90)) end
-end)
+end
 
+for _, p in Players:GetPlayers() do task.spawn(onPlayerAdded, p) end
+Players.PlayerAdded:Connect(onPlayerAdded)
+
+-- ProfileStore autosaves and saves on shutdown; we only release the session.
 Players.PlayerRemoving:Connect(function(player)
-	save(player)
-	data[player], canSave[player], pending[player] = nil, nil, nil
-end)
-
-game:BindToClose(function()
-	for _, p in ipairs(Players:GetPlayers()) do save(p) end
-end)
-
-task.spawn(function()
-	while true do
-		task.wait(120)
-		for _, p in ipairs(Players:GetPlayers()) do save(p) end
-	end
+	PlayerProfile.release(player)
+	pending[player] = nil
 end)
 
 ---------------------------------------------------------------- day / night
@@ -189,7 +151,7 @@ local function rollFish(zone, baitId, luck)
 end
 
 CastFn.OnServerInvoke = function(player, pos)
-	local d = data[player]
+	local d = PlayerProfile.get(player)
 	local char = player.Character
 	local hrp = char and char:FindFirstChild("HumanoidRootPart")
 	if not d or not hrp or typeof(pos) ~= "Vector3" then return { ok = false, msg = "Not ready" } end
@@ -200,28 +162,23 @@ CastFn.OnServerInvoke = function(player, pos)
 	local zone = zoneAt(pos)
 	if not zone then return { ok = false, msg = "Cast into the water" } end
 
-	local bait = Content.baits[d.bait]
-	if bait.price > 0 and (d.baits[d.bait] or 0) <= 0 then
-		d.bait = "worm"
-		bait = Content.baits.worm
-	end
-	local rod = Content.rods[d.rod]
-	local fish, kg = rollFish(zone, d.bait, rod.luck + bait.luck)
+	local bait = Content.baits[d.equipped.bait]
+	local rod = Content.rods[d.equipped.rod]
+	local fish, kg = rollFish(zone, bait.id, rod.luck + bait.luck)
 	if not fish then return { ok = false, msg = "Nothing bites " .. bait.name .. " here. Try another bait." } end
-	if bait.price > 0 then d.baits[d.bait] -= 1 end
+	PlayerProfile.takeBait(player)
 
 	local id = HttpService:GenerateGUID(false)
 	local biteDelay = (3 + math.random() * 7) / bait.biteSpeed / (1 + rod.luck * 0.08)
 	local difficulty = fish.difficulty + math.min(3, kg / rod.maxKg * 1.5)
-	pending[player] = { id = id, fish = fish, kg = kg, t = os.clock(), biteDelay = biteDelay }
+	pending[player] = { id = id, fish = fish, kg = kg, zone = zone, t = os.clock(), biteDelay = biteDelay }
 	sync(player)
 	return { ok = true, id = id, biteDelay = biteDelay, difficulty = difficulty, zone = Content.zones[zone].name }
 end
 
 ReelEv.OnServerEvent:Connect(function(player, id, success)
 	local p = pending[player]
-	local d = data[player]
-	if not p or not d or p.id ~= id then return end
+	if not p or not PlayerProfile.get(player) or p.id ~= id then return end
 	pending[player] = nil
 	if success ~= true then
 		notify(player, "The fish got away...", Color3.fromRGB(255, 140, 90))
@@ -229,27 +186,20 @@ ReelEv.OnServerEvent:Connect(function(player, id, success)
 	end
 	-- the minigame cannot be won faster than ~2s after the bite
 	if os.clock() - p.t < p.biteDelay + 1.5 then return end
-	if #d.bag >= Balance.bagSize then
+	local added, record = PlayerProfile.addCatch(player, { species = p.fish.id, kg = p.kg, zone = p.zone, time = os.time() })
+	if not added then
 		notify(player, "Bag full! Sell your fish first. (fish released)", Color3.fromRGB(255, 90, 90))
 		return
 	end
 	local value = math.max(1, math.floor(p.kg * p.fish.price))
-	table.insert(d.bag, { species = p.fish.id, kg = p.kg, value = value })
-	local c = d.collection[p.fish.id]
-	local record = not c or p.kg > c.best
-	d.collection[p.fish.id] = { count = (c and c.count or 0) + 1, best = c and math.max(c.best, p.kg) or p.kg }
 	local r = Content.rarities[p.fish.rarity]
 	notify(player, string.format("%s %s - %.2f kg (%d coins)%s", r.name, p.fish.name, p.kg, value, record and "  NEW RECORD!" or ""), Color3.fromRGB(table.unpack(r.color)))
 	sync(player)
 end)
 
 EquipBaitEv.OnServerEvent:Connect(function(player, baitId)
-	local d = data[player]
-	local bait = Content.baits[baitId]
-	if not d or not bait then return end
-	if bait.price > 0 and (d.baits[baitId] or 0) <= 0 then return end
-	d.bait = baitId
-	sync(player)
+	if typeof(baitId) ~= "string" then return end
+	if PlayerProfile.equip(player, "baits", baitId) then sync(player) end
 end)
 
 ---------------------------------------------------------------- shops (ProximityPrompts, all server-side)
@@ -275,13 +225,9 @@ onTagged("SellNPC", function(inst)
 	local prompt = promptOn(inst, "Sell fish", "Fish Market")
 	if not prompt then return end
 	prompt.Triggered:Connect(function(player)
-		local d = data[player]
-		if not d then return end
-		if #d.bag == 0 then return notify(player, "Your bag is empty.") end
-		local total = 0
-		for _, f in ipairs(d.bag) do total += f.value end
-		d.money += total
-		d.bag = {}
+		local total = PlayerProfile.sellBag(player)
+		if not total then return end
+		if total == 0 then return notify(player, "Nothing to sell.") end
 		notify(player, string.format("Sold for %d coins!", total), Color3.fromRGB(255, 220, 80))
 		sync(player)
 	end)
@@ -294,14 +240,9 @@ onTagged("RodShop", function(inst)
 	local prompt = promptOn(inst, string.format("Buy / equip (%d)", rod.price), rod.name)
 	if not prompt then return end
 	prompt.Triggered:Connect(function(player)
-		local d = data[player]
-		if not d then return end
-		if not d.rods[rodId] then
-			if d.money < rod.price then return notify(player, "Not enough coins.", Color3.fromRGB(255, 90, 90)) end
-			d.money -= rod.price
-			d.rods[rodId] = true
-		end
-		d.rod = rodId
+		local ok = PlayerProfile.buy(player, "rods", rodId)
+		if ok == nil then return end
+		if not ok then return notify(player, "Not enough coins.", Color3.fromRGB(255, 90, 90)) end
 		notify(player, "Equipped " .. rod.name, Color3.fromRGB(120, 220, 255))
 		sync(player)
 	end)
@@ -314,12 +255,9 @@ onTagged("BaitShop", function(inst)
 	local prompt = promptOn(inst, string.format("Buy %d (%d)", bait.pack, bait.price), bait.name)
 	if not prompt then return end
 	prompt.Triggered:Connect(function(player)
-		local d = data[player]
-		if not d then return end
-		if d.money < bait.price then return notify(player, "Not enough coins.", Color3.fromRGB(255, 90, 90)) end
-		d.money -= bait.price
-		d.baits[baitId] = (d.baits[baitId] or 0) + bait.pack
-		d.bait = baitId
+		local ok = PlayerProfile.buy(player, "baits", baitId)
+		if ok == nil then return end
+		if not ok then return notify(player, "Not enough coins.", Color3.fromRGB(255, 90, 90)) end
 		notify(player, string.format("Bought %d %s", bait.pack, bait.name), Color3.fromRGB(120, 220, 255))
 		sync(player)
 	end)

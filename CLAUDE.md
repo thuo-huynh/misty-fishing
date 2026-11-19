@@ -16,6 +16,10 @@ Dùng 5 nhãn mặc định: needs-triage, needs-info, ready-for-agent, ready-fo
 
 Single-context: một `GLOSSARY.md` và `docs/adr/` ở thư mục gốc. Xem `docs/agents/domain.md`.
 
+## Packages
+
+Thư viện ngoài (ProfileStore) cài bằng Wally, khai báo trong `wally.toml`. Thư mục `Packages/`, `ServerPackages/` không commit: chạy `wally install` sau khi clone, trước `rojo serve`/`rojo build`. Module thuần (được test bằng Lune) không được require package.
+
 ## Tests
 
 Test Luau chạy ngoài Studio bằng Lune (cài qua Rokit: `rokit install`). Chạy toàn bộ: `lune run tests/run`. Mỗi file `tests/**/*.spec.luau` trả về bảng `{ ["tên test"] = function() ... end }`; test hỏng khi hàm ném lỗi (`assert`/`error`). Runner tự tìm mọi file `.spec.luau` (kể cả thư mục con) và thoát mã 1 khi có test hỏng. Xem `tests/sample.spec.luau` làm khuôn. CI (`.github/workflows/tests.yml`) chạy lệnh này trên mỗi PR vào `main` và mỗi push lên `mvp`.

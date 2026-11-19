@@ -42,7 +42,7 @@ local function hudLabel()
 	return make("TextLabel", { Size = UDim2.new(1, 0, 0, 20), BackgroundTransparency = 1, TextColor3 = Color3.new(1, 1, 1),
 		Font = Enum.Font.GothamBold, TextSize = 15, TextXAlignment = Enum.TextXAlignment.Left, Text = "" }, hud)
 end
-local moneyLabel, rodLabel, bagLabel, clockLabel = hudLabel(), hudLabel(), hudLabel(), hudLabel()
+local coinsLabel, rodLabel, bagLabel, clockLabel = hudLabel(), hudLabel(), hudLabel(), hudLabel()
 local baitButton = make("TextButton", { Size = UDim2.new(1, 0, 0, 22), BackgroundColor3 = Color3.fromRGB(50, 90, 130),
 	TextColor3 = Color3.new(1, 1, 1), Font = Enum.Font.GothamBold, TextSize = 14, Text = "Bait" }, hud)
 corner(baitButton)
@@ -98,7 +98,7 @@ local function refreshCollection()
 		make("TextLabel", { Size = UDim2.new(1, -8, 0, 22), BackgroundTransparency = 1, LayoutOrder = i,
 			TextXAlignment = Enum.TextXAlignment.Left, Font = Enum.Font.GothamBold, TextSize = 14,
 			TextColor3 = entry and Color3.fromRGB(table.unpack(Content.rarities[f.rarity].color)) or Color3.fromRGB(110, 110, 110),
-			Text = entry and string.format("%s  [%s]  x%d  best %.2f kg%s", f.name, Content.rarities[f.rarity].name, entry.count, entry.best, f.night and "  (night)" or "")
+			Text = entry and string.format("%s  [%s]  x%d  best %.2f kg%s", f.name, Content.rarities[f.rarity].name, entry.count, entry.bestKg, f.night and "  (night)" or "")
 				or string.format("???  [%s]  %s", Content.rarities[f.rarity].name, Content.zones[f.zones[1]].name) }, collList)
 	end
 	collPanel:FindFirstChildOfClass("TextLabel").Text = string.format("Fish Collection  %d/%d", caught, #Content.list.species)
@@ -124,11 +124,11 @@ NotifyEv.OnClientEvent:Connect(showMessage)
 
 local function refreshHud()
 	if not myData then return end
-	local bait = Content.baits[myData.bait]
-	moneyLabel.Text = "Coins: " .. myData.money
-	rodLabel.Text = "Rod: " .. Content.rods[myData.rod].name
+	local bait = Content.baits[myData.equipped.bait]
+	coinsLabel.Text = "Coins: " .. myData.coins
+	rodLabel.Text = "Rod: " .. Content.rods[myData.equipped.rod].name
 	bagLabel.Text = string.format("Bag: %d/%d", #myData.bag, Content.balance.bagSize)
-	baitButton.Text = "Bait: " .. bait.name .. (bait.price > 0 and (" x" .. (myData.baits[myData.bait] or 0)) or "") .. "  (B)"
+	baitButton.Text = "Bait: " .. bait.name .. (bait.price > 0 and (" x" .. (myData.baits[myData.equipped.bait] or 0)) or "") .. "  (B)"
 end
 
 SyncEv.OnClientEvent:Connect(function(d)
@@ -140,7 +140,7 @@ end)
 local function cycleBait()
 	if not myData then return end
 	local baits = Content.list.baits
-	local start = table.find(baits, Content.baits[myData.bait]) or 1
+	local start = table.find(baits, Content.baits[myData.equipped.bait]) or 1
 	for i = 1, #baits do
 		local b = baits[(start + i - 1) % #baits + 1]
 		if b.price == 0 or (myData.baits[b.id] or 0) > 0 then
@@ -194,7 +194,7 @@ local reel = { zone = 0, vel = 0, fish = 0.5, target = 0.5, nextMove = 0, progre
 
 local function startReel()
 	state = "reeling"
-	local power = Content.rods[myData and myData.rod or "basic"].power
+	local power = Content.rods[myData and myData.equipped.rod or "basic"].power
 	reel.zone, reel.vel, reel.fish, reel.target, reel.nextMove, reel.progress = 0.5 - power / 2, 0, 0.5, 0.5, 0, 0.3
 	zoneBar.Size = UDim2.fromScale(power, 1)
 	reelFrame.Visible = true
@@ -210,7 +210,7 @@ RunService.RenderStepped:Connect(function(dt)
 	if state ~= "reeling" or not cast then return end
 	if not getRod() then return fail() end
 
-	local power = Content.rods[myData and myData.rod or "basic"].power
+	local power = Content.rods[myData and myData.equipped.rod or "basic"].power
 	local d = cast.difficulty
 	-- green zone: push right while holding, falls back left otherwise
 	reel.vel += (reel.holding and 2.2 or -2.2) * dt
