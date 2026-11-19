@@ -8,6 +8,7 @@ local Lighting = game:GetService("Lighting")
 
 local Content = require(RS:WaitForChild("Content"))
 local ReelUI = require(script.Parent:WaitForChild("ReelUI"))
+local BagUI = require(script.Parent:WaitForChild("BagUI"))
 local remotes = RS:WaitForChild("FishingRemotes")
 local CastFn = remotes:WaitForChild("Cast")
 local ReelEv = remotes:WaitForChild("Reel")
@@ -68,6 +69,7 @@ local message = make("TextLabel", { Size = UDim2.new(0.8, 0, 0, 40), Position = 
 	Font = Enum.Font.GothamBlack, TextSize = 26, Text = "", TextWrapped = true }, gui)
 
 local reelUI = ReelUI.mount(gui)
+local bagUI = BagUI.mount(gui)
 
 -- collection panel
 local collPanel = make("Frame", { Size = UDim2.new(0, 380, 0.7, 0), Position = UDim2.new(0.5, -190, 0.15, 0),
@@ -193,6 +195,7 @@ closeButton.Activated:Connect(function() shopPanel.Visible = false end)
 SyncEv.OnClientEvent:Connect(function(d)
 	myData = d
 	refreshHud()
+	bagUI.set(d)
 	if collPanel.Visible then refreshCollection() end
 	if shopPanel.Visible then refreshShop() end
 end)
@@ -306,6 +309,7 @@ UIS.InputBegan:Connect(function(input, processed)
 	if state == "reeling" and isPress(input) then return setHolding(true) end
 	if processed then return end
 	if input.KeyCode == Enum.KeyCode.C then return toggleCollection() end
+	if input.KeyCode == Enum.KeyCode.V then return bagUI.toggle() end
 	if input.KeyCode == Enum.KeyCode.B then return cycle("baits") end
 	if state == "bite" and isPress(input) then return HookEv:FireServer() end
 	if state == "waiting" and isPress(input) then

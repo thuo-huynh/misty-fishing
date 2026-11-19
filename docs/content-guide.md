@@ -123,7 +123,9 @@ Cách làm giống Species: copy một dòng có sẵn, sửa giá trị, thêm 
 - `biteSpeed`: cá cắn nhanh hơn bao nhiêu lần (1.0 = bình thường).
 - Khi thêm Bait mới, **mọi Zone** đều phải có ít nhất một Species ăn Bait đó, nếu không game báo lỗi.
 
-Các con số cân bằng chung (độ hiếm, kích thước túi, độ dài một ngày, ...) nằm trong `content/balance.luau`, mỗi số có chú thích bên cạnh.
+Các con số cân bằng chung (độ hiếm, kích thước túi, độ dài một ngày, ...) nằm trong `content/balance.luau`, mỗi số có chú thích bên cạnh. `bagSize` là số Catch tối đa trong túi; túi đầy thì người chơi không quăng cần được cho tới khi bán cá.
+
+**Chợ cá** (Builder): part hoặc model có tag `SellNPC` trong map là chỗ bán cá; game tự gắn nút "Sell fish" để bán cả túi một lần (trừ cá đang giữ lại). Không cần attribute.
 
 ## 7. Bấm Play và đọc thông báo
 

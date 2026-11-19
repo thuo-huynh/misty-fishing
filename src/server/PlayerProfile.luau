@@ -52,7 +52,7 @@ function PlayerProfile.get(player)
 end
 
 -- PlayerProfile.<op>(player, ...) = ProfileData.<op>(data, Content, ...); returns nil when the profile is not loaded.
-for _, name in { "buy", "equip", "takeBait", "addCatch", "sellBag", "owns", "baitCount" } do
+for _, name in { "buy", "equip", "takeBait", "addCatch", "bagFull", "sellBag", "owns", "baitCount" } do
 	PlayerProfile[name] = function(player, ...)
 		local data = PlayerProfile.get(player)
 		if data then return ProfileData[name](data, Content, ...) end
