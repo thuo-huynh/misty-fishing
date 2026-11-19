@@ -15,3 +15,7 @@ Dùng 5 nhãn mặc định: needs-triage, needs-info, ready-for-agent, ready-fo
 ### Domain docs
 
 Single-context: một `GLOSSARY.md` và `docs/adr/` ở thư mục gốc. Xem `docs/agents/domain.md`.
+
+## Tests
+
+Test Luau chạy ngoài Studio bằng Lune (cài qua Rokit: `rokit install`). Chạy toàn bộ: `lune run tests/run`. Mỗi file `tests/**/*.spec.luau` trả về bảng `{ ["tên test"] = function() ... end }`; test hỏng khi hàm ném lỗi (`assert`/`error`). Runner tự tìm mọi file `.spec.luau` (kể cả thư mục con) và thoát mã 1 khi có test hỏng. Xem `tests/sample.spec.luau` làm khuôn. CI (`.github/workflows/tests.yml`) chạy lệnh này trên mỗi PR vào `main` và mỗi push lên `mvp`.
