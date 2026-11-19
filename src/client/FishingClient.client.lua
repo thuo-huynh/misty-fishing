@@ -34,6 +34,7 @@ local CollectionPanel = require(UI:WaitForChild("CollectionPanel"))
 local ActionButton = require(UI:WaitForChild("ActionButton"))
 local ReelBar = require(UI:WaitForChild("ReelBar"))
 local BagPanel = require(UI:WaitForChild("BagPanel"))
+local TutorialPanel = require(UI:WaitForChild("TutorialPanel"))
 local peek = Fusion.peek
 
 local scope = Fusion.scoped(Fusion)
@@ -88,6 +89,7 @@ for _, child in {
 		onEquip = function(kind, id) EquipEv:FireServer(kind, id) end }),
 	CollectionPanel(scope, { data = data, open = collectionOpen }),
 	BagPanel(scope, { data = data, open = bagOpen }),
+	TutorialPanel(scope, { data = data, onSkip = function() remotes:WaitForChild("SkipTutorial"):FireServer() end }),
 } do
 	child.Parent = gui
 end

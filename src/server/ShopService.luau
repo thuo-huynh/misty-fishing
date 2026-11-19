@@ -7,6 +7,7 @@ local CollectionService = game:GetService("CollectionService")
 
 local Content = require(RS:WaitForChild("Content"))
 local PlayerProfile = require(script.Parent:WaitForChild("PlayerProfile"))
+local TutorialService = require(script.Parent:WaitForChild("TutorialService"))
 
 local SHOPS = { RodShop = { "rods", "RodId" }, LineShop = { "lines", "LineId" }, BaitShop = { "baits", "BaitId" } }
 local KINDS = { rods = true, lines = true, baits = true }
@@ -64,6 +65,7 @@ function ShopService.start(remotes, syncFn, notifyFn)
 		if not ok then return notify(player, if why == "coins" then "Msg_NotEnoughCoins" else "Msg_CantBuy", nil, RED) end
 		local item = Content[kind][id]
 		notify(player, if kind == "baits" then "Msg_Bought" else "Msg_Equipped", { count = item.pack, name = item.name }, BLUE)
+		TutorialService.event(player, "bought", kind)
 		sync(player)
 	end)
 

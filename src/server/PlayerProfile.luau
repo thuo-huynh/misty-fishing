@@ -7,6 +7,7 @@ local ServerStorage = game:GetService("ServerStorage")
 local ProfileStore = require(ServerStorage:WaitForChild("ServerPackages"):WaitForChild("ProfileStore"))
 local Content = require(RS:WaitForChild("Content"))
 local ProfileData = require(script.Parent:WaitForChild("ProfileData"))
+local Tutorial = require(RS:WaitForChild("Tutorial"))
 
 -- New key: the draft's "FishingData_v1" saves are dropped on purpose (no real players yet).
 local store = ProfileStore.New("PlayerProfile_v1", ProfileData.new(Content))
@@ -58,6 +59,13 @@ for _, name in { "buy", "equip", "takeBait", "addCatch", "bagFull", "sellBag", "
 		if data then return ProfileData[name](data, Content, ...) end
 		return nil
 	end
+end
+
+-- Tutorial step (pure rules in shared/Tutorial): true when the step changed, nil when the profile is not loaded.
+function PlayerProfile.tutorial(player, event)
+	local data = PlayerProfile.get(player)
+	if data then return Tutorial.advance(data, Content, event) end
+	return nil
 end
 
 return PlayerProfile

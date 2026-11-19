@@ -9,7 +9,7 @@ function FishingSession.new(catch, tension, content)
 	return { state = "idle", catch = catch, tension = tension, content = content }
 end
 
--- req = { holdingRod, distance (studs), zone (Zone ID or falsy), bait, baitLeft, rod, line, hour }.
+-- req = { holdingRod, distance (studs), zone (Zone ID or falsy), bait, baitLeft, rod, line, hour, fish?, kg? }.
 -- Returns true, or false plus the reason's text key and its args (localization/UI.csv). Does not use up the Bait.
 function FishingSession.cast(s, req, now, rng)
 	local balance = s.content.balance
@@ -18,7 +18,10 @@ function FishingSession.cast(s, req, now, rng)
 	if req.distance > balance.maxCastDistance then return false, "Cast_TooFar" end
 	if not req.zone then return false, "Cast_NotWater" end
 	if req.baitLeft <= 0 then return false, "Cast_OutOfBait", { bait = req.bait.name } end
-	local fish, kg = s.catch.roll(s.content, { zone = req.zone, bait = req.bait, rod = req.rod, hour = req.hour }, rng)
+	local fish, kg = req.fish, req.kg -- set for the guaranteed tutorial Catch
+	if not fish then
+		fish, kg = s.catch.roll(s.content, { zone = req.zone, bait = req.bait, rod = req.rod, hour = req.hour }, rng)
+	end
 	if not fish then return false, "Cast_NoBite", { bait = req.bait.name } end
 	s.state, s.fish, s.kg, s.zone, s.bait, s.rod, s.line = "waiting", fish, kg, req.zone, req.bait, req.rod, req.line
 	s.biteAt = now + s.catch.biteDelay(balance, req.bait, rng)
