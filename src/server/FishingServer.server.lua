@@ -7,7 +7,8 @@ local DataStoreService = game:GetService("DataStoreService")
 local Lighting = game:GetService("Lighting")
 local HttpService = game:GetService("HttpService")
 
-local Config = require(RS:WaitForChild("FishConfig"))
+local Content = require(RS:WaitForChild("Content"))
+local Balance = Content.balance
 local store = DataStoreService:GetDataStore("FishingData_v1")
 
 local remotes = Instance.new("Folder")
@@ -31,7 +32,7 @@ local pending = {}   -- [player] = current cast
 
 ---------------------------------------------------------------- data
 local function defaultData()
-	return { money = 0, rods = { Basic = true }, rod = "Basic", baits = {}, bait = "Worm", bag = {}, collection = {} }
+	return { money = 0, rods = { basic = true }, rod = "basic", baits = {}, bait = "worm", bag = {}, collection = {} }
 end
 
 local function sync(player)
@@ -105,8 +106,8 @@ Players.PlayerAdded:Connect(function(player)
 	else
 		warn("Load failed for", player.Name, "- progress will not be saved this session")
 	end
-	if not Config.Rods[d.rod] then d.rod = "Basic" end
-	if not Config.Baits[d.bait] then d.bait = "Worm" end
+	if not Content.rods[d.rod] then d.rod = "basic" end
+	if not Content.baits[d.bait] then d.bait = "worm" end
 	data[player] = d
 
 	player.CharacterAdded:Connect(function() giveRod(player) end)
@@ -135,7 +136,7 @@ end)
 task.spawn(function()
 	while true do
 		local dt = task.wait(1)
-		Lighting.ClockTime = (Lighting.ClockTime + dt * 24 / Config.DayLength) % 24
+		Lighting.ClockTime = (Lighting.ClockTime + dt * 24 / Balance.dayLength) % 24
 	end
 end)
 
@@ -146,23 +147,25 @@ local function zoneAt(pos)
 			local rel = part.CFrame:PointToObjectSpace(pos)
 			local half = part.Size / 2
 			if math.abs(rel.X) <= half.X + 1 and math.abs(rel.Z) <= half.Z + 1 and math.abs(rel.Y) <= half.Y + 3 then
-				return part:GetAttribute("Zone")
+				-- shortcut: map attributes still hold display-cased names ("Lake"), drop lower() once the map uses Content IDs
+				local zone = part:GetAttribute("Zone")
+				return zone and string.lower(zone)
 			end
 		end
 	end
 end
 
 local function rollFish(zone, baitId, luck)
-	local night = Config.IsNight(Lighting.ClockTime)
+	local night = Lighting.ClockTime < 6 or Lighting.ClockTime >= 18
 	local byRarity = {}
-	for _, f in ipairs(Config.Fish) do
+	for _, f in Content.list.species do
 		if table.find(f.zones, zone) and table.find(f.baits, baitId) and (not f.night or night) then
 			byRarity[f.rarity] = byRarity[f.rarity] or {}
 			table.insert(byRarity[f.rarity], f)
 		end
 	end
 	local total, weights = 0, {}
-	for i, r in ipairs(Config.Rarities) do
+	for i, r in Content.list.rarities do
 		if byRarity[r.id] then
 			local w = r.weight * (1 + luck * 0.25 * (i - 1)) -- luck lifts rarer tiers more
 			weights[r.id] = w
@@ -171,7 +174,7 @@ local function rollFish(zone, baitId, luck)
 	end
 	if total == 0 then return nil end
 	local roll = math.random() * total
-	for _, r in ipairs(Config.Rarities) do
+	for _, r in Content.list.rarities do
 		local w = weights[r.id]
 		if w then
 			roll -= w
@@ -193,16 +196,16 @@ CastFn.OnServerInvoke = function(player, pos)
 	if not char:FindFirstChild("FishingRod") then return { ok = false, msg = "Equip your rod first" } end
 	local p = pending[player]
 	if p and os.clock() - p.t < 120 then return { ok = false, msg = "Already fishing" } end
-	if (hrp.Position - pos).Magnitude > Config.MaxCastDistance then return { ok = false, msg = "Too far!" } end
+	if (hrp.Position - pos).Magnitude > Balance.maxCastDistance then return { ok = false, msg = "Too far!" } end
 	local zone = zoneAt(pos)
 	if not zone then return { ok = false, msg = "Cast into the water" } end
 
-	local bait = Config.Baits[d.bait]
+	local bait = Content.baits[d.bait]
 	if bait.price > 0 and (d.baits[d.bait] or 0) <= 0 then
-		d.bait = "Worm"
-		bait = Config.Baits.Worm
+		d.bait = "worm"
+		bait = Content.baits.worm
 	end
-	local rod = Config.Rods[d.rod]
+	local rod = Content.rods[d.rod]
 	local fish, kg = rollFish(zone, d.bait, rod.luck + bait.luck)
 	if not fish then return { ok = false, msg = "Nothing bites " .. bait.name .. " here. Try another bait." } end
 	if bait.price > 0 then d.baits[d.bait] -= 1 end
@@ -212,7 +215,7 @@ CastFn.OnServerInvoke = function(player, pos)
 	local difficulty = fish.difficulty + math.min(3, kg / rod.maxKg * 1.5)
 	pending[player] = { id = id, fish = fish, kg = kg, t = os.clock(), biteDelay = biteDelay }
 	sync(player)
-	return { ok = true, id = id, biteDelay = biteDelay, difficulty = difficulty, zone = zone }
+	return { ok = true, id = id, biteDelay = biteDelay, difficulty = difficulty, zone = Content.zones[zone].name }
 end
 
 ReelEv.OnServerEvent:Connect(function(player, id, success)
@@ -226,23 +229,23 @@ ReelEv.OnServerEvent:Connect(function(player, id, success)
 	end
 	-- the minigame cannot be won faster than ~2s after the bite
 	if os.clock() - p.t < p.biteDelay + 1.5 then return end
-	if #d.bag >= Config.BagSize then
+	if #d.bag >= Balance.bagSize then
 		notify(player, "Bag full! Sell your fish first. (fish released)", Color3.fromRGB(255, 90, 90))
 		return
 	end
 	local value = math.max(1, math.floor(p.kg * p.fish.price))
-	table.insert(d.bag, { name = p.fish.name, kg = p.kg, value = value })
-	local c = d.collection[p.fish.name]
+	table.insert(d.bag, { species = p.fish.id, kg = p.kg, value = value })
+	local c = d.collection[p.fish.id]
 	local record = not c or p.kg > c.best
-	d.collection[p.fish.name] = { count = (c and c.count or 0) + 1, best = c and math.max(c.best, p.kg) or p.kg }
-	local r = Config.GetRarity(p.fish.rarity)
-	notify(player, string.format("%s %s - %.2f kg (%d coins)%s", p.fish.rarity, p.fish.name, p.kg, value, record and "  NEW RECORD!" or ""), r.color)
+	d.collection[p.fish.id] = { count = (c and c.count or 0) + 1, best = c and math.max(c.best, p.kg) or p.kg }
+	local r = Content.rarities[p.fish.rarity]
+	notify(player, string.format("%s %s - %.2f kg (%d coins)%s", r.name, p.fish.name, p.kg, value, record and "  NEW RECORD!" or ""), Color3.fromRGB(table.unpack(r.color)))
 	sync(player)
 end)
 
 EquipBaitEv.OnServerEvent:Connect(function(player, baitId)
 	local d = data[player]
-	local bait = Config.Baits[baitId]
+	local bait = Content.baits[baitId]
 	if not d or not bait then return end
 	if bait.price > 0 and (d.baits[baitId] or 0) <= 0 then return end
 	d.bait = baitId
@@ -285,8 +288,8 @@ onTagged("SellNPC", function(inst)
 end)
 
 onTagged("RodShop", function(inst)
-	local rodId = inst:GetAttribute("RodId")
-	local rod = Config.Rods[rodId]
+	local rodId = string.lower(inst:GetAttribute("RodId") or "")
+	local rod = Content.rods[rodId]
 	if not rod then return warn("RodShop missing valid RodId:", inst:GetFullName()) end
 	local prompt = promptOn(inst, string.format("Buy / equip (%d)", rod.price), rod.name)
 	if not prompt then return end
@@ -305,8 +308,8 @@ onTagged("RodShop", function(inst)
 end)
 
 onTagged("BaitShop", function(inst)
-	local baitId = inst:GetAttribute("BaitId")
-	local bait = Config.Baits[baitId]
+	local baitId = string.lower(inst:GetAttribute("BaitId") or "")
+	local bait = Content.baits[baitId]
 	if not bait or bait.price == 0 then return warn("BaitShop missing valid BaitId:", inst:GetFullName()) end
 	local prompt = promptOn(inst, string.format("Buy %d (%d)", bait.pack, bait.price), bait.name)
 	if not prompt then return end
