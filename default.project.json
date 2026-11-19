@@ -2,7 +2,10 @@
   "name": "FishingGame",
   "tree": {
     "$className": "DataModel",
-    "ReplicatedStorage": { "$path": "src/shared" },
+    "ReplicatedStorage": {
+      "$path": "src/shared",
+      "ContentData": { "$path": "content" }
+    },
     "ServerScriptService": { "$path": "src/server" },
     "StarterPlayer": {
       "StarterPlayerScripts": { "$path": "src/client" }
