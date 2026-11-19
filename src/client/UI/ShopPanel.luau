@@ -6,6 +6,7 @@ local Fusion = require(RS:WaitForChild("Packages"):WaitForChild("Fusion"))
 local Content = require(RS:WaitForChild("Content"))
 local T = require(script.Parent:WaitForChild("T"))
 local W = require(script.Parent:WaitForChild("Widgets"))
+local Theme = require(script.Parent:WaitForChild("Theme"))
 local Children, peek = Fusion.Children, Fusion.peek
 
 local SLOT = { rods = "rod", lines = "line", baits = "bait" }
@@ -57,22 +58,22 @@ return function(scope, props)
 		Position = UDim2.fromScale(0.5, 0.45),
 		Size = UDim2.new(0.9, 0, 0, 0),
 		AutomaticSize = Enum.AutomaticSize.Y,
-		BackgroundTransparency = 0,
+		solid = true,
 		Visible = field(function() return true end, false),
 		[Children] = {
-			scope:New "UISizeConstraint" { MaxSize = Vector2.new(340, math.huge) },
-			scope:New "UIListLayout" { Padding = UDim.new(0, 6), SortOrder = Enum.SortOrder.LayoutOrder },
+			scope:New "UISizeConstraint" { MaxSize = Vector2.new(380, math.huge) },
+			scope:New "UIListLayout" { Padding = UDim.new(0, 10), SortOrder = Enum.SortOrder.LayoutOrder },
 			scope:New "UIPadding" {
-				PaddingLeft = UDim.new(0, 10), PaddingRight = UDim.new(0, 10),
-				PaddingTop = UDim.new(0, 8), PaddingBottom = UDim.new(0, 10),
+				PaddingLeft = UDim.new(0, 20), PaddingRight = UDim.new(0, 20),
+				PaddingTop = UDim.new(0, 16), PaddingBottom = UDim.new(0, 20),
 			},
-			W.Label(scope, { LayoutOrder = 1, Size = UDim2.new(1, 0, 0, 24), Font = Enum.Font.GothamBlack, TextSize = 18,
+			W.Label(scope, { LayoutOrder = 1, Size = UDim2.new(1, 0, 0, 30), FontFace = Theme.display, TextSize = 26,
 				Text = field(function(v) return v.title end, "") }),
 			W.Label(scope, { LayoutOrder = 2, Size = UDim2.new(1, 0, 0, 0), AutomaticSize = Enum.AutomaticSize.Y,
-				Font = Enum.Font.Gotham, TextSize = 14, TextWrapped = true, TextYAlignment = Enum.TextYAlignment.Top,
+				TextColor3 = Theme.inkMuted, TextSize = 15, TextWrapped = true, TextYAlignment = Enum.TextYAlignment.Top,
 				Text = field(function(v) return v.stats end, "") }),
 			W.Button(scope, { LayoutOrder = 3, Visible = field(function(v) return v.buy ~= nil end, false),
-				Text = field(function(v) return v.buy or "" end, ""), onClick = act(props.onBuy) }),
+				primary = true, Text = field(function(v) return v.buy or "" end, ""), onClick = act(props.onBuy) }),
 			W.Button(scope, { LayoutOrder = 4, Visible = field(function(v) return v.equip end, false),
 				Text = T("Shop_Equip"), onClick = act(props.onEquip) }),
 			W.Button(scope, { LayoutOrder = 5, Text = T("Shop_Close"), onClick = function() item:set(nil) end }),

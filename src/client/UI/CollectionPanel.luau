@@ -5,10 +5,11 @@ local Fusion = require(RS:WaitForChild("Packages"):WaitForChild("Fusion"))
 local Content = require(RS:WaitForChild("Content"))
 local T = require(script.Parent:WaitForChild("T"))
 local W = require(script.Parent:WaitForChild("Widgets"))
+local Theme = require(script.Parent:WaitForChild("Theme"))
 local Children = Fusion.Children
 
 local function name(kind, id) return T(`{kind}_{id}`, nil, Content[kind][id].name) end
-local GREY = Color3.fromRGB(110, 110, 110)
+local GREY = Theme.inkFaint
 
 return function(scope, props)
 	local data = props.data
@@ -17,15 +18,15 @@ return function(scope, props)
 		AnchorPoint = Vector2.new(0.5, 0.5),
 		Position = UDim2.fromScale(0.5, 0.5),
 		Size = UDim2.new(0.9, 0, 0.75, 0),
-		BackgroundTransparency = 0,
+		solid = true,
 		Visible = props.open,
 		[Children] = {
 			scope:New "UISizeConstraint" { MaxSize = Vector2.new(420, 520) },
 			W.Label(scope, {
 				Size = UDim2.new(1, -56, 0, 36),
 				Position = UDim2.fromOffset(12, 4),
-				Font = Enum.Font.GothamBlack,
-				TextSize = 20,
+				FontFace = Theme.display,
+				TextSize = 26,
 				Text = scope:Computed(function(use)
 					local d, caught = use(data), 0
 					for _, f in Content.list.species do
@@ -37,7 +38,7 @@ return function(scope, props)
 			W.Button(scope, {
 				AnchorPoint = Vector2.new(1, 0),
 				Position = UDim2.new(1, -6, 0, 6),
-				Size = UDim2.fromOffset(36, 36),
+				Size = UDim2.fromOffset(44, 44),
 				Text = "X",
 				onClick = function() props.open:set(false) end,
 			}),
@@ -62,8 +63,8 @@ return function(scope, props)
 							}
 							table.insert(rows, W.Label(scope, {
 								LayoutOrder = i,
-								Size = UDim2.new(1, -8, 0, 22),
-								TextSize = 14,
+								Size = UDim2.new(1, -8, 0, 28),
+								TextSize = 15,
 								TextTruncate = Enum.TextTruncate.AtEnd,
 								TextColor3 = if entry then Color3.fromRGB(table.unpack(rarity.color)) else GREY,
 								Text = T(if not entry then "Coll_Unknown" elseif f.night then "Coll_CaughtNight" else "Coll_Caught", args),

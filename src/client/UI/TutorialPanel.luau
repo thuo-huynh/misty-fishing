@@ -10,9 +10,10 @@ local Fusion = require(RS:WaitForChild("Packages"):WaitForChild("Fusion"))
 local Tutorial = require(RS:WaitForChild("Tutorial"))
 local T = require(script.Parent:WaitForChild("T"))
 local W = require(script.Parent:WaitForChild("Widgets"))
+local Theme = require(script.Parent:WaitForChild("Theme"))
 local Children = Fusion.Children
 
-local GOLD = Color3.fromRGB(255, 210, 60)
+local GOLD = Theme.amber
 
 local function nearest(tag)
 	local char = Players.LocalPlayer.Character
@@ -57,7 +58,7 @@ return function(scope, props)
 	return W.Panel(scope, {
 		Name = "Tutorial",
 		AnchorPoint = Vector2.new(0.5, 0),
-		Position = UDim2.new(0.5, 0, 0, 56),
+		Position = UDim2.new(0.5, 0, 0, 112), -- below the clock chip and the message line
 		Size = UDim2.new(0.6, 0, 0, 0),
 		AutomaticSize = Enum.AutomaticSize.Y,
 		Visible = scope:Computed(function(use) return use(hint) ~= nil end),
@@ -78,7 +79,7 @@ return function(scope, props)
 					return if h then T(h.text) else ""
 				end),
 			}),
-			W.Button(scope, { Size = UDim2.fromOffset(140, 32), Text = T("Tut_Skip"), BackgroundColor3 = Color3.fromRGB(80, 80, 95),
+			W.Button(scope, { Size = UDim2.fromOffset(140, 36), Text = T("Tut_Skip"),
 				onClick = props.onSkip }),
 		},
 	})

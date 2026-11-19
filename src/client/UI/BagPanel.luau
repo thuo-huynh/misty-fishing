@@ -7,9 +7,10 @@ local Content = require(RS:WaitForChild("Content"))
 local Catch = require(RS:WaitForChild("Rules"):WaitForChild("Catch"))
 local T = require(script.Parent:WaitForChild("T"))
 local W = require(script.Parent:WaitForChild("Widgets"))
+local Theme = require(script.Parent:WaitForChild("Theme"))
 local Children = Fusion.Children
 
-local GREY = Color3.fromRGB(110, 110, 110)
+local GREY = Theme.inkFaint
 
 return function(scope, props)
 	local data = props.data
@@ -37,17 +38,17 @@ return function(scope, props)
 		AnchorPoint = Vector2.new(0.5, 0.5),
 		Position = UDim2.fromScale(0.5, 0.5),
 		Size = UDim2.new(0.9, 0, 0.75, 0),
-		BackgroundTransparency = 0,
+		solid = true,
 		Visible = props.open,
 		[Children] = {
 			scope:New "UISizeConstraint" { MaxSize = Vector2.new(420, 520) },
 			W.Label(scope, {
-				Size = UDim2.new(1, -56, 0, 36), Position = UDim2.fromOffset(12, 4), Font = Enum.Font.GothamBlack, TextSize = 18,
+				Size = UDim2.new(1, -56, 0, 36), Position = UDim2.fromOffset(12, 4), FontFace = Theme.display, TextSize = 26,
 				TextTruncate = Enum.TextTruncate.AtEnd,
 				Text = scope:Computed(function(use) return use(view).title end),
 			}),
 			W.Button(scope, {
-				AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -6, 0, 6), Size = UDim2.fromOffset(36, 36),
+				AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -6, 0, 6), Size = UDim2.fromOffset(44, 44),
 				Text = "X", onClick = function() props.open:set(false) end,
 			}),
 			scope:New "ScrollingFrame" {
@@ -63,7 +64,7 @@ return function(scope, props)
 						local labels = {}
 						for i, r in use(view).rows do
 							table.insert(labels, W.Label(scope, {
-								LayoutOrder = i, Size = UDim2.new(1, -8, 0, 22), TextSize = 14, TextColor3 = r.color, Text = r.text,
+								LayoutOrder = i, Size = UDim2.new(1, -8, 0, 28), TextSize = 15, TextColor3 = r.color, Text = r.text,
 							}))
 						end
 						return labels

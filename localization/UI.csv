@@ -1,17 +1,17 @@
 Key,Source,Context,Example,en
-Hud_Coins,Coins: {coins},,Coins: 120,Coins: {coins}
-Hud_Bag,Bag: {count}/{size},,Bag: 3/10,Bag: {count}/{size}
-Hud_Time,Time: {time},,Time: 14:05,Time: {time}
-Hud_TimeNight,Time: {time} (night),,Time: 21:30 (night),Time: {time} (night)
-Hud_Rod,Rod: {name},,Rod: Basic Rod,Rod: {name}
-Hud_Line,Line: {name},,Line: Basic Line,Line: {name}
-Hud_Bait,Bait: {name},,Bait: Worm,Bait: {name}
-Hud_BaitCount,Bait: {name} x{count},,Bait: Corn x5,Bait: {name} x{count}
+Hud_Coins,COINS,,,COINS
+Hud_Bag,BAG,,,BAG
+Hud_Time,{time},,,{time}
+Hud_TimeNight,{time} · Night,,,{time} · Night
+Hud_Rod,Rod,,,Rod
+Hud_Line,Line,,,Line
+Hud_Bait,Bait,,,Bait
 Hud_Collection,Collection,,,Collection
-Action_Cast,Cast,,,Cast
-Action_ReelIn,Reel in,,,Reel in
-Action_Hook,Hook!,,,Hook!
-Action_Reel,Reel!,,,Reel!
+Hud_Tackle,TACKLE,HUD caption above the Tackle slots,,TACKLE
+Action_Cast,CAST,,,CAST
+Action_ReelIn,REEL IN,,,REEL IN
+Action_Hook,HOOK!,,,HOOK!
+Action_Reel,REELING,,,REELING
 Msg_AimAtWater,Aim at the water to cast,,,Aim at the water to cast
 Msg_CastFailed,Cast failed,,,Cast failed
 Msg_Waiting,Waiting for a bite... ({zone}),,Waiting for a bite... (Lake),Waiting for a bite... ({zone})
@@ -27,7 +27,8 @@ Msg_Snapped,Line snapped!,,,Line snapped!
 Msg_SnappedBait,Line snapped! Lost your {bait}.,,Line snapped! Lost your Corn.,Line snapped! Lost your {bait}.
 Cast_BagFull,Bag full! Sell your fish at the Fish Market.,,,Bag full! Sell your fish at the Fish Market.
 Reel_Hint,Hold to reel. Release before the line snaps!,,,Hold to reel. Release before the line snaps!
-Reel_Distance,Fish: {studs} studs away,,Fish: 12.5 studs away,Fish: {studs} studs away
+Reel_Tension,LINE TENSION,Caption above the tension bar,,LINE TENSION
+Reel_Distance,Fish: {studs} studs away,,,Fish: {studs} studs away
 Bag_Title,Bag {count}/{size} - sells for {coins} coins,,Bag 3/10 - sells for 95 coins,Bag {count}/{size} - sells for {coins} coins
 Bag_Row,{name}  {kg} kg  {coins} coins,,Perch  1.20 kg  35 coins,{name}  {kg} kg  {coins} coins
 Bag_RowKept,{name}  {kg} kg  {coins} coins  (kept),,,{name}  {kg} kg  {coins} coins  (kept)
