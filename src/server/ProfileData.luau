@@ -117,7 +117,8 @@ function ProfileData.sellBag(d, content)
 	for _, catch in d.bag do
 		local species = content.species[catch.species]
 		if species and not catch.kept then
-			total += math.max(1, math.floor(catch.kg * species.price))
+			-- shortcut: copy of Rules/Catch.sellPrice (this module must stay require-free for Lune); share it if pricing grows
+			total += math.max(1, math.floor(species.price * catch.kg + 1e-6))
 		else
 			table.insert(left, catch)
 		end

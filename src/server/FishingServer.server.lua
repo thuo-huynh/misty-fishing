@@ -6,9 +6,28 @@ local CollectionService = game:GetService("CollectionService")
 local Lighting = game:GetService("Lighting")
 local HttpService = game:GetService("HttpService")
 
+-- Content Validator (#4): kiểm tra content trước khi dùng; có lỗi thì in ra Output và từ chối mọi lượt câu.
+local contentOk = true
+do
+	local folder = RS:WaitForChild("ContentData")
+	local raw = {}
+	for _, kind in { "species", "zones", "rods", "lines", "baits", "balance" } do
+		raw[kind] = require(folder:WaitForChild(kind))
+	end
+	local report = require(RS:WaitForChild("ContentValidator")).validate(raw, require(folder:WaitForChild("published")))
+	for _, w in report.warnings do warn(`[Content] Cảnh báo: {w}`) end
+	for _, e in report.errors do warn(`[Content] LỖI: {e}`) end
+	if #report.errors > 0 then
+		contentOk = false
+		warn(`[Content] Có {#report.errors} lỗi content — server từ chối mọi lượt câu cho tới khi sửa xong.`)
+	end
+end
+
 local Content = require(RS:WaitForChild("Content"))
 local PlayerProfile = require(script.Parent:WaitForChild("PlayerProfile"))
+local Catch = require(RS:WaitForChild("Rules"):WaitForChild("Catch"))
 local Balance = Content.balance
+local catchContent = { species = Content.list.species, balance = Balance }
 
 local remotes = Instance.new("Folder")
 remotes.Name = "FishingRemotes"
@@ -117,40 +136,8 @@ local function zoneAt(pos)
 	end
 end
 
-local function rollFish(zone, baitId, luck)
-	local night = Lighting.ClockTime < 6 or Lighting.ClockTime >= 18
-	local byRarity = {}
-	for _, f in Content.list.species do
-		if table.find(f.zones, zone) and table.find(f.baits, baitId) and (not f.night or night) then
-			byRarity[f.rarity] = byRarity[f.rarity] or {}
-			table.insert(byRarity[f.rarity], f)
-		end
-	end
-	local total, weights = 0, {}
-	for i, r in Content.list.rarities do
-		if byRarity[r.id] then
-			local w = r.weight * (1 + luck * 0.25 * (i - 1)) -- luck lifts rarer tiers more
-			weights[r.id] = w
-			total += w
-		end
-	end
-	if total == 0 then return nil end
-	local roll = math.random() * total
-	for _, r in Content.list.rarities do
-		local w = weights[r.id]
-		if w then
-			roll -= w
-			if roll <= 0 then
-				local pool = byRarity[r.id]
-				local fish = pool[math.random(#pool)]
-				local kg = fish.kg[1] + (fish.kg[2] - fish.kg[1]) * math.random() ^ 2 -- big ones are rarer
-				return fish, math.floor(kg * 100 + 0.5) / 100
-			end
-		end
-	end
-end
-
 CastFn.OnServerInvoke = function(player, pos)
+	if not contentOk then return { ok = false, msg = "Content lỗi, xem Output" } end
 	local d = PlayerProfile.get(player)
 	local char = player.Character
 	local hrp = char and char:FindFirstChild("HumanoidRootPart")
@@ -164,12 +151,12 @@ CastFn.OnServerInvoke = function(player, pos)
 
 	local bait = Content.baits[d.equipped.bait]
 	local rod = Content.rods[d.equipped.rod]
-	local fish, kg = rollFish(zone, bait.id, rod.luck + bait.luck)
+	local fish, kg = Catch.roll(catchContent, { zone = zone, bait = bait, rod = rod, hour = Lighting.ClockTime }, math.random)
 	if not fish then return { ok = false, msg = "Nothing bites " .. bait.name .. " here. Try another bait." } end
 	PlayerProfile.takeBait(player)
 
 	local id = HttpService:GenerateGUID(false)
-	local biteDelay = (3 + math.random() * 7) / bait.biteSpeed / (1 + rod.luck * 0.08)
+	local biteDelay = Catch.biteDelay(Balance, bait, math.random)
 	local difficulty = fish.difficulty + math.min(3, kg / rod.maxKg * 1.5)
 	pending[player] = { id = id, fish = fish, kg = kg, zone = zone, t = os.clock(), biteDelay = biteDelay }
 	sync(player)
@@ -191,7 +178,7 @@ ReelEv.OnServerEvent:Connect(function(player, id, success)
 		notify(player, "Bag full! Sell your fish first. (fish released)", Color3.fromRGB(255, 90, 90))
 		return
 	end
-	local value = math.max(1, math.floor(p.kg * p.fish.price))
+	local value = Catch.sellPrice(p.fish, p.kg)
 	local r = Content.rarities[p.fish.rarity]
 	notify(player, string.format("%s %s - %.2f kg (%d coins)%s", r.name, p.fish.name, p.kg, value, record and "  NEW RECORD!" or ""), Color3.fromRGB(table.unpack(r.color)))
 	sync(player)
