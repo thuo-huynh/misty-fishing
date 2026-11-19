@@ -91,4 +91,27 @@ function ContentValidator.validate(content, published)
 	return { errors = errors, warnings = warnings }
 end
 
+-- checkMap(zones, waters) -> {string}: đối chiếu map với content (#13, ADR 0001).
+--   zones: content/zones.luau; waters: { { name = tên part, zoneId = attribute ZoneId (có thể nil) } }
+function ContentValidator.checkMap(zones, waters)
+	local errors = {}
+	local known, used = {}, {}
+	for _, z in zones do known[z.id] = true end
+	for _, w in waters do
+		if known[w.zoneId] then
+			used[w.zoneId] = true
+		elseif w.zoneId == nil then
+			table.insert(errors, `Vùng nước '{w.name}' chưa có attribute ZoneId`)
+		else
+			table.insert(errors, `Vùng nước '{w.name}' có ZoneId '{w.zoneId}' không tồn tại trong content`)
+		end
+	end
+	for _, z in zones do
+		if not z.hidden and not used[z.id] then
+			table.insert(errors, `Zone '{z.id}' chưa có vùng nước nào trong map`)
+		end
+	end
+	return errors
+end
+
 return ContentValidator
