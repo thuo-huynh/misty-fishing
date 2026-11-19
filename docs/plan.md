@@ -40,7 +40,7 @@ Một game câu cá trên Roblox lấy cảm hứng từ Russian Fishing 4: có 
 2. **Content là file `.luau`.** Xem [ADR 0002](adr/0002-content-as-luau-files.md).
 3. **Mọi nội dung có Content ID cố định.** ID không bao giờ đổi hay xóa. Xem [ADR 0003](adr/0003-stable-content-ids.md).
 4. **Game đứng tên một Roblox Group**, không đứng tên tài khoản cá nhân.
-5. **Hai place:** **Dev** để cả team test, **Live** cho người chơi thật.
+5. **Hai experience riêng:** `Misty Fishing [DEV]` để cả team test, `Misty Fishing` cho người chơi thật. Xem [ADR 0004](adr/0004-separate-dev-experience.md).
 6. **Nhánh `main` được khóa.** Mọi thay đổi đi qua Pull Request và cần 1 người duyệt.
 7. **Giao diện game bằng tiếng Anh trước**, thiết kế sẵn để thêm tiếng Việt.
 8. **Phát hành trên Roblox toàn cầu.**
@@ -125,7 +125,7 @@ Content Designer định nghĩa Zone trong `content/zones.luau` (`id`, tên, lo�
 2. Thêm loài vào `content/species.luau`.
 3. Mở Studio và bấm Play. Game tự kiểm tra và báo lỗi nếu có, ví dụ Zone không tồn tại hay cân nặng min lớn hơn max.
 4. Tạo Pull Request. GitHub tự kiểm tra lại.
-5. Programmer duyệt và gộp vào `main`, rồi đưa lên place Dev để test.
+5. Programmer duyệt và gộp vào `main`, rồi đưa lên `Misty Fishing [DEV]` để test.
 
 Chi tiết từng bước có hình minh họa sẽ nằm trong `docs/content-guide.md`.
 
@@ -153,9 +153,9 @@ Tổng thời gian khoảng 3 tháng. Mỗi giai đoạn chỉ kết thúc khi �
 | Cả team | **Xác nhận ít nhất 1 người đăng nhập được Roblox Studio** (rủi ro số 1) |
 | Content Designer | Tạo Roblox Group, mời 2 thành viên và phân quyền; tạo bảng GitHub Projects |
 | Programmer | Tạo GitHub repo, khóa nhánh `main`, cài Rojo, Wally, Fusion, ProfileStore; dựng cấu trúc thư mục; thiết lập CI kiểm tra code |
-| Builder | Tạo experience cùng 2 place Dev và Live trong Group; bật Team Create; cài Blender |
+| Builder | Tạo experience `Misty Fishing [DEV]` trong Group; bật Team Create; cài Blender |
 
-**Điều kiện xong:** cả 3 người clone được repo, chạy Rojo và thấy code đồng bộ vào place Dev.
+**Điều kiện xong:** cả 3 người clone được repo, chạy Rojo và thấy code đồng bộ vào `Misty Fishing [DEV]`.
 
 ### Giai đoạn 1: MVP (3–4 tuần)
 | Ai | Việc |
@@ -188,7 +188,7 @@ Tổng thời gian khoảng 3 tháng. Mỗi giai đoạn chỉ kết thúc khi �
 | Ai | Việc |
 |---|---|
 | Content Designer | Kiểm tra tên "Misty Fishing" không trùng trên Roblox; viết mô tả game, chuẩn bị ảnh và icon; cân bằng lần cuối |
-| Programmer | Tối ưu cho điện thoại (StreamingEnabled, giảm lag); sửa lỗi; đưa bản cuối lên place Live |
+| Programmer | Tối ưu cho điện thoại (StreamingEnabled, giảm lag); sửa lỗi; tạo experience `Misty Fishing` và đưa bản cuối lên đó |
 | Builder | Hoàn thiện đồ họa và ánh sáng; giảm chi tiết cho máy yếu |
 
 **Điều kiện xong:** game chạy mượt trên điện thoại tầm trung và được công khai trên Roblox.
