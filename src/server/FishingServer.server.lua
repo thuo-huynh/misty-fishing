@@ -15,7 +15,14 @@ do
 	for _, kind in { "species", "zones", "rods", "lines", "baits", "balance" } do
 		raw[kind] = require(folder:WaitForChild(kind))
 	end
-	local report = require(RS:WaitForChild("ContentValidator")).validate(raw, require(folder:WaitForChild("published")))
+	local Validator = require(RS:WaitForChild("ContentValidator"))
+	local report = Validator.validate(raw, require(folder:WaitForChild("published")))
+	-- #13: map chỉ gặp content qua attribute ZoneId trên part có tag FishingZone (ADR 0001)
+	local waters = {}
+	for _, part in CollectionService:GetTagged("FishingZone") do
+		table.insert(waters, { name = part:GetFullName(), zoneId = part:GetAttribute("ZoneId") })
+	end
+	for _, e in Validator.checkMap(raw.zones, waters) do table.insert(report.errors, e) end
 	for _, w in report.warnings do warn(`[Content] Cảnh báo: {w}`) end
 	for _, e in report.errors do warn(`[Content] LỖI: {e}`) end
 	if #report.errors > 0 then
@@ -166,9 +173,7 @@ local function zoneAt(pos)
 			local rel = part.CFrame:PointToObjectSpace(pos)
 			local half = part.Size / 2
 			if math.abs(rel.X) <= half.X + 1 and math.abs(rel.Z) <= half.Z + 1 and math.abs(rel.Y) <= half.Y + 3 then
-				-- shortcut: map attributes still hold display-cased names ("Lake"), drop lower() once the map uses Content IDs
-				local zone = part:GetAttribute("Zone")
-				return zone and string.lower(zone)
+				return part:GetAttribute("ZoneId")
 			end
 		end
 	end
