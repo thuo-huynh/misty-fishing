@@ -4,7 +4,6 @@ local RS = game:GetService("ReplicatedStorage")
 local ServerStorage = game:GetService("ServerStorage")
 local CollectionService = game:GetService("CollectionService")
 local Lighting = game:GetService("Lighting")
-local HttpService = game:GetService("HttpService")
 
 -- Content Validator (#4): kiểm tra content trước khi dùng; có lỗi thì in ra Output và từ chối mọi lượt câu.
 local contentOk = true
@@ -32,10 +31,9 @@ end
 
 local Content = require(RS:WaitForChild("Content"))
 local PlayerProfile = require(script.Parent:WaitForChild("PlayerProfile"))
+local FishingService = require(script.Parent:WaitForChild("FishingService"))
 local ShopService = require(script.Parent:WaitForChild("ShopService"))
-local Catch = require(RS:WaitForChild("Rules"):WaitForChild("Catch"))
 local Balance = Content.balance
-local catchContent = { species = Content.list.species, balance = Balance }
 
 local remotes = Instance.new("Folder")
 remotes.Name = "FishingRemotes"
@@ -45,13 +43,9 @@ local function remote(class, name)
 	r.Parent = remotes
 	return r
 end
-local CastFn = remote("RemoteFunction", "Cast")
-local ReelEv = remote("RemoteEvent", "Reel")
 local SyncEv = remote("RemoteEvent", "Sync")
 local NotifyEv = remote("RemoteEvent", "Notify")
 remotes.Parent = RS
-
-local pending = {}   -- [player] = current cast
 
 ---------------------------------------------------------------- data
 local function sync(player)
@@ -118,7 +112,6 @@ Players.PlayerAdded:Connect(onPlayerAdded)
 -- ProfileStore autosaves and saves on shutdown; we only release the session.
 Players.PlayerRemoving:Connect(function(player)
 	PlayerProfile.release(player)
-	pending[player] = nil
 end)
 
 ---------------------------------------------------------------- day / night
@@ -129,66 +122,8 @@ task.spawn(function()
 	end
 end)
 
----------------------------------------------------------------- fishing
-local function zoneAt(pos)
-	for _, part in ipairs(CollectionService:GetTagged("FishingZone")) do
-		if part:IsA("BasePart") then
-			local rel = part.CFrame:PointToObjectSpace(pos)
-			local half = part.Size / 2
-			if math.abs(rel.X) <= half.X + 1 and math.abs(rel.Z) <= half.Z + 1 and math.abs(rel.Y) <= half.Y + 3 then
-				return part:GetAttribute("ZoneId")
-			end
-		end
-	end
-end
-
-CastFn.OnServerInvoke = function(player, pos)
-	if not contentOk then return { ok = false, msg = "Content lỗi, xem Output" } end
-	local d = PlayerProfile.get(player)
-	local char = player.Character
-	local hrp = char and char:FindFirstChild("HumanoidRootPart")
-	if not d or not hrp or typeof(pos) ~= "Vector3" then return { ok = false, msg = "Not ready" } end
-	if not char:FindFirstChild("FishingRod") then return { ok = false, msg = "Equip your rod first" } end
-	local p = pending[player]
-	if p and os.clock() - p.t < 120 then return { ok = false, msg = "Already fishing" } end
-	if (hrp.Position - pos).Magnitude > Balance.maxCastDistance then return { ok = false, msg = "Too far!" } end
-	local zone = zoneAt(pos)
-	if not zone then return { ok = false, msg = "Cast into the water" } end
-
-	local bait = Content.baits[d.equipped.bait]
-	local rod = Content.rods[d.equipped.rod]
-	local fish, kg = Catch.roll(catchContent, { zone = zone, bait = bait, rod = rod, hour = Lighting.ClockTime }, math.random)
-	if not fish then return { ok = false, msg = "Nothing bites " .. bait.name .. " here. Try another bait." } end
-	ShopService.takeBait(player)
-
-	local id = HttpService:GenerateGUID(false)
-	local biteDelay = Catch.biteDelay(Balance, bait, math.random)
-	local difficulty = fish.difficulty + math.min(3, kg / rod.maxKg * 1.5)
-	pending[player] = { id = id, fish = fish, kg = kg, zone = zone, t = os.clock(), biteDelay = biteDelay }
-	sync(player)
-	return { ok = true, id = id, biteDelay = biteDelay, difficulty = difficulty, zone = Content.zones[zone].name }
-end
-
-ReelEv.OnServerEvent:Connect(function(player, id, success)
-	local p = pending[player]
-	if not p or not PlayerProfile.get(player) or p.id ~= id then return end
-	pending[player] = nil
-	if success ~= true then
-		notify(player, "The fish got away...", Color3.fromRGB(255, 140, 90))
-		return
-	end
-	-- the minigame cannot be won faster than ~2s after the bite
-	if os.clock() - p.t < p.biteDelay + 1.5 then return end
-	local added, record = PlayerProfile.addCatch(player, { species = p.fish.id, kg = p.kg, zone = p.zone, time = os.time() })
-	if not added then
-		notify(player, "Bag full! Sell your fish first. (fish released)", Color3.fromRGB(255, 90, 90))
-		return
-	end
-	local value = Catch.sellPrice(p.fish, p.kg)
-	local r = Content.rarities[p.fish.rarity]
-	notify(player, string.format("%s %s - %.2f kg (%d coins)%s", r.name, p.fish.name, p.kg, value, record and "  NEW RECORD!" or ""), Color3.fromRGB(table.unpack(r.color)))
-	sync(player)
-end)
+---------------------------------------------------------------- fishing (#9: FishingService)
+FishingService.start({ remotes = remotes, contentOk = contentOk, notify = notify, sync = sync })
 
 ---------------------------------------------------------------- shops (ProximityPrompts, all server-side)
 local function promptOn(inst, actionText, objectText)

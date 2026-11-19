@@ -10,6 +10,9 @@ local Content = require(RS:WaitForChild("Content"))
 local remotes = RS:WaitForChild("FishingRemotes")
 local CastFn = remotes:WaitForChild("Cast")
 local ReelEv = remotes:WaitForChild("Reel")
+local HookEv = remotes:WaitForChild("Hook")
+local CancelEv = remotes:WaitForChild("Cancel")
+local StateEv = remotes:WaitForChild("State")
 local EquipEv = remotes:WaitForChild("Equip")
 local BuyEv = remotes:WaitForChild("Buy")
 local OpenShopEv = remotes:WaitForChild("OpenShop")
@@ -19,7 +22,7 @@ local NotifyEv = remotes:WaitForChild("Notify")
 local player = Players.LocalPlayer
 local myData = nil
 local state = "idle" -- idle | casting | waiting | bite | reeling
-local cast = nil     -- { id, difficulty, bobber, beam }
+local cast = nil     -- { difficulty, basePos, bobber }; the server owns the real state
 
 ---------------------------------------------------------------- UI
 local gui = Instance.new("ScreenGui")
@@ -233,7 +236,7 @@ local function cleanup()
 end
 
 local function fail()
-	if cast then ReelEv:FireServer(cast.id, false) end
+	if state == "reeling" then ReelEv:FireServer(false) end
 	cleanup()
 end
 
@@ -253,8 +256,9 @@ end
 
 local reel = { zone = 0, vel = 0, fish = 0.5, target = 0.5, nextMove = 0, progress = 0.3, holding = false }
 
-local function startReel()
+local function startReel(difficulty)
 	state = "reeling"
+	cast.difficulty = difficulty
 	local power = Content.rods[myData and myData.equipped.rod or "basic"].power
 	reel.zone, reel.vel, reel.fish, reel.target, reel.nextMove, reel.progress = 0.5 - power / 2, 0, 0.5, 0.5, 0, 0.3
 	zoneBar.Size = UDim2.fromScale(power, 1)
@@ -265,7 +269,7 @@ end
 RunService.RenderStepped:Connect(function(dt)
 	if cast and cast.bobber then
 		local base = cast.basePos
-		local dip = state == "bite" and -0.5 or 0
+		local dip = state == "bite" and -0.8 or 0 -- sinks on a bite
 		cast.bobber.Position = base + Vector3.new(0, math.sin(os.clock() * 3) * 0.08 + dip, 0)
 	end
 	if state ~= "reeling" or not cast then return end
@@ -297,7 +301,7 @@ RunService.RenderStepped:Connect(function(dt)
 	progBar.Size = UDim2.fromScale(math.clamp(reel.progress, 0, 1), 1)
 
 	if reel.progress >= 1 then
-		ReelEv:FireServer(cast.id, true)
+		ReelEv:FireServer(true)
 		cleanup()
 	elseif reel.progress <= 0 then
 		fail()
@@ -321,23 +325,27 @@ local function tryCast(screenPos)
 		state = "idle"
 		return showMessage(res and res.msg or "Cast failed", Color3.fromRGB(255, 140, 90))
 	end
-	cast = { id = res.id, difficulty = res.difficulty, basePos = hit.Position + Vector3.new(0, 0.2, 0) }
+	cast = { basePos = hit.Position + Vector3.new(0, 0.2, 0) }
 	cast.bobber = spawnBobber(cast.basePos)
 	state = "waiting"
-	showMessage("Waiting for a bite... (" .. res.zone .. ")")
-	local myId = res.id
-	task.delay(res.biteDelay, function()
-		if not cast or cast.id ~= myId or state ~= "waiting" then return end
-		state = "bite"
-		showMessage("BITE! Click now!", Color3.fromRGB(255, 230, 60))
-		task.delay(Content.balance.hookWindow, function()
-			if cast and cast.id == myId and state == "bite" then
-				showMessage("Too slow - it got away.", Color3.fromRGB(255, 140, 90))
-				fail()
-			end
-		end)
-	end)
+	showMessage("Waiting for a bite... (" .. res.zone .. ")  Click to reel in")
 end
+
+local biteSound = make("Sound", { SoundId = "rbxasset://sounds/electronicpingshort.wav", Volume = 1 }, gui)
+
+-- the server decides every transition; the client only shows it
+StateEv.OnClientEvent:Connect(function(newState, difficulty)
+	if not cast then return end
+	if newState == "bite" and state == "waiting" then
+		state = "bite"
+		biteSound:Play()
+		showMessage("BITE! Click now!", Color3.fromRGB(255, 230, 60))
+	elseif newState == "reeling" then
+		startReel(difficulty)
+	elseif newState == "idle" then
+		cleanup()
+	end
+end)
 
 local function isPress(input)
 	return input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch
@@ -349,7 +357,11 @@ UIS.InputBegan:Connect(function(input, processed)
 	if processed then return end
 	if input.KeyCode == Enum.KeyCode.C then return toggleCollection() end
 	if input.KeyCode == Enum.KeyCode.B then return cycle("baits") end
-	if state == "bite" and isPress(input) then return startReel() end
+	if state == "bite" and isPress(input) then return HookEv:FireServer() end
+	if state == "waiting" and isPress(input) then
+		CancelEv:FireServer() -- reel in
+		return cleanup()
+	end
 	if state == "idle" and (input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch) then
 		tryCast(input.Position)
 	end
@@ -359,15 +371,5 @@ UIS.InputEnded:Connect(function(input)
 	if isPress(input) then reel.holding = false end
 end)
 
--- unequipping or dying cancels the cast
-player.CharacterAdded:Connect(function(char)
-	if cast then fail() end
-	char.ChildRemoved:Connect(function(c)
-		if c.Name == "FishingRod" and (state == "waiting" or state == "bite") then fail() end
-	end)
-end)
-if player.Character then
-	player.Character.ChildRemoved:Connect(function(c)
-		if c.Name == "FishingRod" and (state == "waiting" or state == "bite") then fail() end
-	end)
-end
+-- unequip, death and leave are cancelled by the server (State "idle"); a new character just clears the old bobber
+player.CharacterAdded:Connect(cleanup)
