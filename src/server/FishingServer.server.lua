@@ -7,6 +7,23 @@ local DataStoreService = game:GetService("DataStoreService")
 local Lighting = game:GetService("Lighting")
 local HttpService = game:GetService("HttpService")
 
+-- Content Validator (#4): kiểm tra content trước khi dùng; có lỗi thì in ra Output và từ chối mọi lượt câu.
+local contentOk = true
+do
+	local folder = RS:WaitForChild("ContentData")
+	local raw = {}
+	for _, kind in { "species", "zones", "rods", "lines", "baits", "balance" } do
+		raw[kind] = require(folder:WaitForChild(kind))
+	end
+	local report = require(RS:WaitForChild("ContentValidator")).validate(raw, require(folder:WaitForChild("published")))
+	for _, w in report.warnings do warn(`[Content] Cảnh báo: {w}`) end
+	for _, e in report.errors do warn(`[Content] LỖI: {e}`) end
+	if #report.errors > 0 then
+		contentOk = false
+		warn(`[Content] Có {#report.errors} lỗi content — server từ chối mọi lượt câu cho tới khi sửa xong.`)
+	end
+end
+
 local Content = require(RS:WaitForChild("Content"))
 local Balance = Content.balance
 local store = DataStoreService:GetDataStore("FishingData_v1")
@@ -189,6 +206,7 @@ local function rollFish(zone, baitId, luck)
 end
 
 CastFn.OnServerInvoke = function(player, pos)
+	if not contentOk then return { ok = false, msg = "Content lỗi, xem Output" } end
 	local d = data[player]
 	local char = player.Character
 	local hrp = char and char:FindFirstChild("HumanoidRootPart")
