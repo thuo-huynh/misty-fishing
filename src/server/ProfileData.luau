@@ -103,9 +103,14 @@ function ProfileData.takeBait(d, content)
 	return bait, false
 end
 
+-- True when the bag holds balance.bagSize Catches (kept ones count); checked at cast time so no fish is wasted.
+function ProfileData.bagFull(d, content)
+	return #d.bag >= content.balance.bagSize
+end
+
 -- catch = { species, kg, zone, time }. Returns false when the bag is full, else true and whether it is a new record.
 function ProfileData.addCatch(d, content, catch)
-	if #d.bag >= content.balance.bagSize then return false end
+	if ProfileData.bagFull(d, content) then return false end
 	table.insert(d.bag, { species = catch.species, kg = catch.kg, zone = catch.zone, time = catch.time, kept = false })
 	local entry = d.collection[catch.species]
 	local record = not entry or catch.kg > entry.bestKg
@@ -117,13 +122,13 @@ function ProfileData.addCatch(d, content, catch)
 end
 
 -- Sell every Catch except kept ones and ones whose Species left content. Returns Coins earned.
-function ProfileData.sellBag(d, content)
+-- sellPrice(species, kg) is Rules/Catch.sellPrice, passed in so this module stays require-free (Lune).
+function ProfileData.sellBag(d, content, sellPrice)
 	local total, left = 0, {}
 	for _, catch in d.bag do
 		local species = content.species[catch.species]
 		if species and not catch.kept then
-			-- shortcut: copy of Rules/Catch.sellPrice (this module must stay require-free for Lune); share it if pricing grows
-			total += math.max(1, math.floor(species.price * catch.kg + 1e-6))
+			total += sellPrice(species, catch.kg)
 		else
 			table.insert(left, catch)
 		end

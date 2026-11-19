@@ -1,6 +1,6 @@
 -- HUD, top-left and compact so the water ahead stays clear: Coins, Bag, time of day,
--- one button per Tackle slot (tap cycles to the next usable one) and the Collection button.
--- props = { data: Value(Profile data | nil), keyboard: boolean, onCycle(kind), onCollection() }
+-- one button per Tackle slot (tap cycles to the next usable one), and the Bag and Collection buttons.
+-- props = { data: Value(Profile data | nil), keyboard: boolean, onCycle(kind), onBag(), onCollection() }
 local RS = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 local Lighting = game:GetService("Lighting")
@@ -42,9 +42,9 @@ return function(scope, props)
 				PaddingTop = UDim.new(0, 6), PaddingBottom = UDim.new(0, 8),
 			},
 			W.Label(scope, { LayoutOrder = 1, Text = text(function(d) return T("Hud_Coins", { coins = d.coins }) end) }),
-			W.Label(scope, { LayoutOrder = 2, Text = text(function(d)
-				return T("Hud_Bag", { count = #d.bag, size = Content.balance.bagSize })
-			end) }),
+			W.Button(scope, { LayoutOrder = 2, BackgroundColor3 = Color3.fromRGB(60, 120, 90), Text = text(function(d)
+				return T("Hud_Bag", { count = #d.bag, size = Content.balance.bagSize }) .. hint("V")
+			end), onClick = props.onBag }),
 			W.Label(scope, { LayoutOrder = 3, Text = clock }),
 			W.Button(scope, { LayoutOrder = 4, Text = text(function(d) return T("Hud_Rod", { name = name("rods", d.equipped.rod) }) end),
 				onClick = function() props.onCycle("rods") end }),

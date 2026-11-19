@@ -8,6 +8,7 @@ return {
 	-- Reeling simulation (src/shared/Rules/Tension.luau). Tension is 0..1 of the Line's maxTension.
 	-- Fish force = kg * kgForce + difficulty * difficultyForce (same units as Line maxTension).
 	tension = {
+		startDistance = 30,   -- studs between player and fish when hooked
 		escapeDistance = 80,  -- studs; fish further than this escapes
 		fleeSpeed = 2,        -- studs/s per difficulty the fish swims away while not holding
 		relaxRate = 1,        -- Tension lost per second while not holding

@@ -1,5 +1,5 @@
 -- Fishing Service: Roblox glue around FishingSession (one per player). Clients only send intents;
--- the server checks the cast, times the bite and hook window, and cancels on unequip, death or leave.
+-- the server checks the cast, times the bite and hook window, runs the reel (Tension) and cancels on unequip, death or leave.
 local Players = game:GetService("Players")
 local RS = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
@@ -8,6 +8,7 @@ local Lighting = game:GetService("Lighting")
 
 local Content = require(RS:WaitForChild("Content"))
 local Catch = require(RS:WaitForChild("Rules"):WaitForChild("Catch"))
+local Tension = require(RS:WaitForChild("Rules"):WaitForChild("Tension"))
 local PlayerProfile = require(script.Parent:WaitForChild("PlayerProfile"))
 local FishingSession = require(script.Parent:WaitForChild("FishingSession"))
 local ShopService = require(script.Parent:WaitForChild("ShopService"))
@@ -31,8 +32,9 @@ local function zoneAt(pos)
 end
 
 -- deps = { remotes = Folder, contentOk = boolean, notify = fn(player, key, args?, color?), sync = fn(player) }
--- Remotes: Cast (RemoteFunction, target Vector3 -> { ok, msg, args | zone }; msg is a text key), Hook / Reel(success) / Cancel (client -> server),
--- State (server -> client: "bite" | "reeling", difficulty | "idle").
+-- Remotes: Cast (RemoteFunction, target Vector3 -> { ok, msg, args | zone }; msg is a text key), Hook / Cancel (client -> server),
+-- Reel (client -> server: holding boolean; server -> client: tension 0..1, distance studs, every reel tick),
+-- State (server -> client: "bite" | "reeling" | "idle").
 function FishingService.start(deps)
 	local function remote(class, name)
 		local r = Instance.new(class)
@@ -47,7 +49,7 @@ function FishingService.start(deps)
 	local StateEv = remote("RemoteEvent", "State")
 
 	local function session(player)
-		sessions[player] = sessions[player] or FishingSession.new(Catch, catchContent)
+		sessions[player] = sessions[player] or FishingSession.new(Catch, Tension, catchContent)
 		return sessions[player]
 	end
 
@@ -67,6 +69,7 @@ function FishingService.start(deps)
 		local char = player.Character
 		local hrp = char and char:FindFirstChild("HumanoidRootPart")
 		if not d or not hrp or typeof(pos) ~= "Vector3" then return { ok = false, msg = "Cast_NotReady" } end
+		if PlayerProfile.bagFull(player) then return { ok = false, msg = "Cast_BagFull" } end
 		local ok, msg, args = FishingSession.cast(s, {
 			holdingRod = char:FindFirstChild("FishingRod") ~= nil,
 			distance = (hrp.Position - pos).Magnitude,
@@ -74,6 +77,7 @@ function FishingService.start(deps)
 			bait = Content.baits[d.equipped.bait],
 			baitLeft = PlayerProfile.baitCount(player, d.equipped.bait),
 			rod = Content.rods[d.equipped.rod],
+			line = Content.lines[d.equipped.line],
 			hour = Lighting.ClockTime,
 		}, os.clock(), math.random)
 		if not ok then return { ok = false, msg = msg, args = args } end
@@ -85,29 +89,28 @@ function FishingService.start(deps)
 	HookEv.OnServerEvent:Connect(function(player)
 		local s = sessions[player]
 		if not s or not FishingSession.allow(s, os.clock()) then return end
-		if not FishingSession.hook(s, os.clock()) then return end -- too early or too late: update() handles the escape
-		local d = PlayerProfile.get(player)
-		if not d then return cancel(player) end
-		local rod = Content.rods[d.equipped.rod]
-		StateEv:FireClient(player, "reeling", s.fish.difficulty + math.min(3, s.kg / rod.maxKg * 1.5))
+		if not FishingSession.hook(s, os.clock(), math.random) then return end -- too early or too late: update() handles the miss
+		StateEv:FireClient(player, "reeling")
 	end)
 
-	ReelEv.OnServerEvent:Connect(function(player, success)
+	ReelEv.OnServerEvent:Connect(function(player, holding)
 		local s = sessions[player]
 		if not s or s.state ~= "reeling" or not FishingSession.allow(s, os.clock()) then return end
-		local c = FishingSession.finishReel(s, os.clock(), success)
-		if not c then return deps.notify(player, "Msg_GotAway", nil, Color3.fromRGB(255, 140, 90)) end
+		FishingSession.reel(s, holding)
+	end)
+
+	local function landed(player, c)
 		local added, record = PlayerProfile.addCatch(player, { species = c.fish.id, kg = c.kg, zone = c.zone, time = os.time() })
-		if not added then
+		if not added then -- safety net: casting is already refused when the bag is full
 			return deps.notify(player, "Msg_BagFull", nil, Color3.fromRGB(255, 90, 90))
 		end
 		local r = Content.rarities[c.fish.rarity]
 		-- shortcut: Content names go as English; key them by Content ID when names get translated
-		deps.notify(player, if record then "Msg_CaughtRecord" else "Msg_Caught", {
+		deps.notify(player, if record then "Msg_CaughtRecord" elseif PlayerProfile.bagFull(player) then "Msg_CaughtBagFull" else "Msg_Caught", {
 			rarity = r.name, fish = c.fish.name, kg = string.format("%.2f", c.kg), coins = Catch.sellPrice(c.fish, c.kg),
 		}, Color3.fromRGB(table.unpack(r.color)))
 		deps.sync(player)
-	end)
+	end
 
 	CancelEv.OnServerEvent:Connect(function(player)
 		local s = sessions[player]
@@ -117,12 +120,24 @@ function FishingService.start(deps)
 	RunService.Heartbeat:Connect(function()
 		local now = os.clock()
 		for player, s in sessions do
-			local event = FishingSession.update(s, now)
+			local bait = s.bait
+			local event, c = FishingSession.update(s, now)
 			if event == "bite" then
 				StateEv:FireClient(player, "bite")
-			elseif event == "escaped" then
+			elseif event == "tick" then
+				ReelEv:FireClient(player, s.reel.tension, s.reel.distance)
+			elseif event then
 				StateEv:FireClient(player, "idle")
-				deps.notify(player, "Msg_TooSlow", nil, Color3.fromRGB(255, 140, 90))
+				if event == "landed" then
+					landed(player, c)
+				elseif event == "snapped" then
+					-- the Bait was used up at the cast; a snap is where the player feels it
+					deps.notify(player, if bait.price > 0 then "Msg_SnappedBait" else "Msg_Snapped", { bait = bait.name },
+						Color3.fromRGB(255, 90, 90))
+				else
+					deps.notify(player, if event == "missed" then "Msg_TooSlow" else "Msg_GotAway", nil,
+						Color3.fromRGB(255, 140, 90))
+				end
 			end
 		end
 	end)

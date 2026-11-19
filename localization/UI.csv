@@ -22,6 +22,15 @@ Msg_TooSlow,Too slow - it got away.,,,Too slow - it got away.
 Msg_BagFull,Bag full! Sell your fish first. (fish released),,,Bag full! Sell your fish first. (fish released)
 Msg_Caught,{rarity} {fish} - {kg} kg ({coins} coins),,Rare Perch - 1.20 kg (35 coins),{rarity} {fish} - {kg} kg ({coins} coins)
 Msg_CaughtRecord,{rarity} {fish} - {kg} kg ({coins} coins)  NEW RECORD!,,,{rarity} {fish} - {kg} kg ({coins} coins)  NEW RECORD!
+Msg_CaughtBagFull,{rarity} {fish} - {kg} kg ({coins} coins)  Bag full!,,,{rarity} {fish} - {kg} kg ({coins} coins)  Bag full!
+Msg_Snapped,Line snapped!,,,Line snapped!
+Msg_SnappedBait,Line snapped! Lost your {bait}.,,Line snapped! Lost your Corn.,Line snapped! Lost your {bait}.
+Cast_BagFull,Bag full! Sell your fish at the Fish Market.,,,Bag full! Sell your fish at the Fish Market.
+Reel_Hint,Hold to reel. Release before the line snaps!,,,Hold to reel. Release before the line snaps!
+Reel_Distance,Fish: {studs} studs away,,Fish: 12.5 studs away,Fish: {studs} studs away
+Bag_Title,Bag {count}/{size} - sells for {coins} coins,,Bag 3/10 - sells for 95 coins,Bag {count}/{size} - sells for {coins} coins
+Bag_Row,{name}  {kg} kg  {coins} coins,,Perch  1.20 kg  35 coins,{name}  {kg} kg  {coins} coins
+Bag_RowKept,{name}  {kg} kg  {coins} coins  (kept),,,{name}  {kg} kg  {coins} coins  (kept)
 Msg_NothingToSell,Nothing to sell.,,,Nothing to sell.
 Msg_Sold,Sold for {coins} coins!,,Sold for 80 coins!,Sold for {coins} coins!
 Msg_NotEnoughCoins,Not enough coins.,,,Not enough coins.

@@ -1,5 +1,6 @@
 -- ProfileData: hình dạng Player Profile và các thao tác có tên, kiểm tra với content thật.
 local ProfileData = require("../src/server/ProfileData")
+local Catch = require("../src/shared/Rules/Catch")
 
 local function byId(list)
 	local t = {}
@@ -111,6 +112,18 @@ return {
 		assert(#d.bag == c.balance.bagSize and d.collection[sp].bestKg == 2)
 	end,
 
+	["túi đầy khi đủ bagSize Catch; báo trước khi quăng cần"] = function()
+		local c = content()
+		local d = ProfileData.new(c)
+		local sp = c.list.species[1].id
+		for _ = 1, c.balance.bagSize - 1 do ProfileData.addCatch(d, c, { species = sp, kg = 1, zone = "lake", time = 1 }) end
+		assert(ProfileData.bagFull(d, c) == false)
+		ProfileData.addCatch(d, c, { species = sp, kg = 1, zone = "lake", time = 1 })
+		assert(ProfileData.bagFull(d, c) == true)
+		ProfileData.sellBag(d, c, Catch.sellPrice)
+		assert(ProfileData.bagFull(d, c) == false, "bán xong thì còn chỗ")
+	end,
+
 	["bán túi: cộng Coins (giá/kg × kg, làm tròn xuống, tối thiểu 1), giữ lại cá khoe và cá của loài đã mất"] = function()
 		local c = content()
 		local d = ProfileData.new(c)
@@ -121,8 +134,20 @@ return {
 			{ species = sp.id, kg = 3, zone = "lake", time = 1, kept = true },
 			{ species = "ghost_fish", kg = 3, zone = "lake", time = 1, kept = false },
 		}
-		local total = ProfileData.sellBag(d, c)
+		local total = ProfileData.sellBag(d, c, Catch.sellPrice)
 		assert(total == math.floor(2.5 * sp.price) + 1 and d.coins == total, `bán được {total}`)
 		assert(#d.bag == 2 and d.bag[1].kept and d.bag[2].species == "ghost_fish")
+	end,
+
+	["bán túi dùng luật giá được truyền vào (Rules/Catch.sellPrice), không tự tính"] = function()
+		local c = content()
+		local d = ProfileData.new(c)
+		local sp = c.list.species[1].id
+		d.bag = { { species = sp, kg = 2, zone = "lake", time = 1, kept = false }, { species = sp, kg = 5, zone = "lake", time = 1, kept = false } }
+		local total = ProfileData.sellBag(d, c, function(species, kg)
+			assert(species.id == sp)
+			return kg * 1000
+		end)
+		assert(total == 7000 and d.coins == 7000 and #d.bag == 0, `bán được {total}`)
 	end,
 }
