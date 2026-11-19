@@ -5,6 +5,12 @@ return {
 	hookWindow = 1.5,     -- seconds to react when the bobber dips
 	dayLength = 720,      -- real seconds for one in-game day
 
+	-- Fishing Rules: catch (src/shared/Rules/Catch.luau)
+	catch = {
+		luckPerTier = 0.25,      -- each luck point adds this x tier index to a rarity's weight
+		biteDelay = { 3, 10 },   -- seconds before a bite, divided by the Bait's biteSpeed
+	},
+
 	-- rarest last; `id` never changes once shipped (ADR 0003)
 	rarities = {
 		{ id = "common",    name = "Common",    weight = 60, color = { 210, 210, 210 } },
