@@ -1,40 +1,45 @@
--- Pure check of the content/ tables. Run: lune run tests/content.spec.luau
+-- Kiểm tra các bảng trong content/: id hợp lệ, không trùng, tham chiếu đúng, đủ dữ liệu mẫu Lake.
 local kinds = {
 	species = require("../content/species"),
 	zones = require("../content/zones"),
 	rods = require("../content/rods"),
 	lines = require("../content/lines"),
 	baits = require("../content/baits"),
+	rarities = require("../content/balance").rarities,
 }
-local balance = require("../content/balance")
 
-local function ids(list, kind)
+local function index(kind)
 	local set = {}
-	for _, r in list do
-		assert(type(r.id) == "string" and r.id:match("^[a-z][a-z0-9_]*$"), `{kind}: bad id {r.id}`)
-		assert(not set[r.id], `{kind}: duplicate id {r.id}`)
-		assert(type(r.name) == "string", `{kind} {r.id}: missing name`)
+	for _, r in kinds[kind] do
+		assert(type(r.id) == "string" and r.id:match("^[a-z][a-z0-9_]*$"), `{kind}: id sai {r.id}`)
+		assert(not set[r.id], `{kind}: trùng id {r.id}`)
+		assert(type(r.name) == "string", `{kind} {r.id}: thiếu name`)
 		set[r.id] = r
 	end
 	return set
 end
 
-local by = {}
-for kind, list in kinds do by[kind] = ids(list, kind) end
-local rarities = ids(balance.rarities, "rarities")
+return {
+	["mọi bản ghi có id hợp lệ, không trùng, có name"] = function()
+		for kind in kinds do index(kind) end
+	end,
 
-for _, s in kinds.species do
-	assert(rarities[s.rarity], `species {s.id}: unknown rarity {s.rarity}`)
-	for _, z in s.zones do assert(by.zones[z], `species {s.id}: unknown zone {z}`) end
-	for _, b in s.baits do assert(by.baits[b], `species {s.id}: unknown bait {b}`) end
-end
+	["Species chỉ tham chiếu rarity, Zone, Bait có thật"] = function()
+		local rarities, zones, baits = index("rarities"), index("zones"), index("baits")
+		for _, s in kinds.species do
+			assert(rarities[s.rarity], `species {s.id}: rarity lạ {s.rarity}`)
+			for _, z in s.zones do assert(zones[z], `species {s.id}: zone lạ {z}`) end
+			for _, b in s.baits do assert(baits[b], `species {s.id}: bait lạ {b}`) end
+		end
+	end,
 
-local lake = 0
-for _, s in kinds.species do
-	if table.find(s.zones, "lake") then lake += 1 end
-end
-assert(lake == 8, `expected 8 Lake species, got {lake}`)
-assert(#kinds.rods == 2 and #kinds.lines == 2 and #kinds.baits == 3, "MVP sample counts")
-assert(by.baits.worm and by.baits.worm.price == 0, "Worm must be free")
-
-print("content ok")
+	["dữ liệu mẫu Lake đủ để chơi thử"] = function()
+		local lake = 0
+		for _, s in kinds.species do
+			if table.find(s.zones, "lake") then lake += 1 end
+		end
+		assert(lake == 8, `cần 8 Species ở Lake, có {lake}`)
+		assert(#kinds.rods == 2 and #kinds.lines == 2 and #kinds.baits == 3, "số Rod/Line/Bait mẫu sai")
+		assert(index("baits").worm.price == 0, "Worm phải miễn phí")
+	end,
+}
