@@ -57,7 +57,8 @@ return {
 		local c = content()
 		local d = ProfileData.new(c)
 		d.coins = 499
-		assert(ProfileData.buy(d, c, "rods", "carbon") == false and d.coins == 499 and d.equipped.rod == "basic")
+		local ok, why = ProfileData.buy(d, c, "rods", "carbon")
+		assert(ok == false and why == "coins" and d.coins == 499 and d.equipped.rod == "basic", tostring(why))
 		d.coins = 600
 		assert(ProfileData.buy(d, c, "rods", "carbon") == true)
 		assert(d.coins == 100 and ProfileData.owns(d, c, "rods", "carbon") and d.equipped.rod == "carbon")
@@ -72,7 +73,10 @@ return {
 		d.coins = 40
 		assert(ProfileData.buy(d, c, "baits", "corn") == true)
 		assert(d.coins == 10 and d.baits.corn == 10 and d.equipped.bait == "corn")
-		assert(ProfileData.buy(d, c, "baits", "worm") == false, "Bait miễn phí không bán")
+		local ok, why = ProfileData.buy(d, c, "baits", "worm")
+		assert(ok == false and why == "invalid", "Bait miễn phí không bán")
+		ok, why = ProfileData.buy(d, c, "rods", "gold")
+		assert(ok == false and why == "invalid", "Content ID lạ")
 	end,
 
 	["không trang bị được Tackle chưa sở hữu hay Bait đã hết"] = function()
@@ -88,8 +92,10 @@ return {
 		local c = content()
 		local d = ProfileData.new(c)
 		d.baits.corn, d.equipped.bait = 1, "corn"
-		assert(ProfileData.takeBait(d, c).id == "corn" and d.baits.corn == 0 and d.equipped.bait == "worm")
-		assert(ProfileData.takeBait(d, c).id == "worm" and d.baits.worm == nil)
+		local bait, ranOut = ProfileData.takeBait(d, c)
+		assert(bait.id == "corn" and ranOut and d.baits.corn == 0 and d.equipped.bait == "worm")
+		bait, ranOut = ProfileData.takeBait(d, c)
+		assert(bait.id == "worm" and not ranOut and d.baits.worm == nil)
 	end,
 
 	["Catch vào túi và Collection; kỷ lục khi nặng hơn; túi đầy thì từ chối"] = function()
