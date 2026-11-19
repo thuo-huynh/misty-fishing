@@ -25,7 +25,7 @@ Một vùng nước được định nghĩa trong content, quyết định loài
 _Tránh dùng_: Area, region, fishing spot
 
 **Tackle** (Bộ đồ câu):
-Ba món đồ người chơi dùng để câu: một Rod, một Line và một Bait.
+Bốn món đồ người chơi dùng để câu: một Rod, một Line, một Float và một Bait.
 _Tránh dùng_: Equipment, loadout, gear set
 
 **Rod** (Cần câu):
@@ -35,6 +35,10 @@ _Tránh dùng_: Pole, fishing rod (trong code)
 **Line** (Dây câu):
 Món đồ câu quyết định độ căng tối đa trước khi dây đứt.
 _Tránh dùng_: String, fishing line
+
+**Float** (Phao):
+Món đồ câu quyết định mồi nằm ở tầng nước nào (mặt, giữa, đáy) và độ nhạy khi cá cắn.
+_Tránh dùng_: Bobber, phao câu (trong code)
 
 **Bait** (Mồi):
 Món đồ câu quyết định loài nào sẽ cắn câu; mồi giả (lure) cũng là một loại Bait.
