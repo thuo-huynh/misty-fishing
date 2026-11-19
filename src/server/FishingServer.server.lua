@@ -33,6 +33,7 @@ local Content = require(RS:WaitForChild("Content"))
 local PlayerProfile = require(script.Parent:WaitForChild("PlayerProfile"))
 local FishingService = require(script.Parent:WaitForChild("FishingService"))
 local ShopService = require(script.Parent:WaitForChild("ShopService"))
+local MarketService = require(script.Parent:WaitForChild("MarketService"))
 local Balance = Content.balance
 
 local remotes = Instance.new("Folder")
@@ -125,33 +126,5 @@ end)
 ---------------------------------------------------------------- fishing (#9: FishingService)
 FishingService.start({ remotes = remotes, contentOk = contentOk, notify = notify, sync = sync })
 
----------------------------------------------------------------- shops (ProximityPrompts, all server-side)
-local function promptOn(inst, actionText, objectText)
-	local parent = inst
-	if inst:IsA("Model") then parent = inst.PrimaryPart or inst:FindFirstChildWhichIsA("BasePart", true) end
-	if not parent then return end
-	local prompt = Instance.new("ProximityPrompt")
-	prompt.ActionText = actionText
-	prompt.ObjectText = objectText or ""
-	prompt.HoldDuration = 0.3
-	prompt.RequiresLineOfSight = false
-	prompt.Parent = parent
-	return prompt
-end
-
-local function onTagged(tag, fn)
-	for _, inst in ipairs(CollectionService:GetTagged(tag)) do task.spawn(fn, inst) end
-	CollectionService:GetInstanceAddedSignal(tag):Connect(fn)
-end
-
-onTagged("SellNPC", function(inst)
-	local prompt = promptOn(inst, "Sell fish", "Fish Market")
-	if not prompt then return end
-	prompt.Triggered:Connect(function(player)
-		local total = PlayerProfile.sellBag(player)
-		if not total then return end
-		if total == 0 then return notify(player, "Nothing to sell.") end
-		notify(player, string.format("Sold for %d coins!", total), Color3.fromRGB(255, 220, 80))
-		sync(player)
-	end)
-end)
+---------------------------------------------------------------- fish market (#11: MarketService)
+MarketService.start(sync, notify)

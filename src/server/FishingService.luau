@@ -69,6 +69,7 @@ function FishingService.start(deps)
 		local char = player.Character
 		local hrp = char and char:FindFirstChild("HumanoidRootPart")
 		if not d or not hrp or typeof(pos) ~= "Vector3" then return { ok = false, msg = "Not ready" } end
+		if PlayerProfile.bagFull(player) then return { ok = false, msg = "Bag full! Sell your fish at the Fish Market." } end
 		local ok, msg = FishingSession.cast(s, {
 			holdingRod = char:FindFirstChild("FishingRod") ~= nil,
 			distance = (hrp.Position - pos).Magnitude,
@@ -100,12 +101,12 @@ function FishingService.start(deps)
 
 	local function landed(player, c)
 		local added, record = PlayerProfile.addCatch(player, { species = c.fish.id, kg = c.kg, zone = c.zone, time = os.time() })
-		if not added then
+		if not added then -- safety net: casting is already refused when the bag is full
 			return deps.notify(player, "Bag full! Sell your fish first. (fish released)", Color3.fromRGB(255, 90, 90))
 		end
 		local r = Content.rarities[c.fish.rarity]
 		deps.notify(player, string.format("%s %s - %.2f kg (%d coins)%s", r.name, c.fish.name, c.kg, Catch.sellPrice(c.fish, c.kg),
-			record and "  NEW RECORD!" or ""), Color3.fromRGB(table.unpack(r.color)))
+			if record then "  NEW RECORD!" elseif PlayerProfile.bagFull(player) then "  Bag full!" else ""), Color3.fromRGB(table.unpack(r.color)))
 		deps.sync(player)
 	end
 
