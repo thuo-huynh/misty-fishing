@@ -127,7 +127,7 @@ Content Designer định nghĩa Zone trong `content/zones.luau` (`id`, tên, lo�
 4. Tạo Pull Request. GitHub tự kiểm tra lại.
 5. Programmer duyệt và gộp vào `main`, rồi đưa lên `Misty Fishing [DEV]` để test.
 
-Chi tiết từng bước có hình minh họa sẽ nằm trong `docs/content-guide.md`.
+Chi tiết từng bước: [`docs/content-guide.md`](content-guide.md).
 
 ### 8.2. Quy ước Git
 - Mỗi việc một nhánh, đặt tên theo người làm: `content/...`, `feature/...` hoặc `fix/...`.
