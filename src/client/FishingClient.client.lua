@@ -83,6 +83,8 @@ for _, child in {
 		onCollection = toggleCollection }),
 	reelBar,
 	messageLabel,
+	-- before the panels: later siblings draw on top, so an open panel covers the tutorial banner
+	TutorialPanel(scope, { data = data, onSkip = function() remotes:WaitForChild("SkipTutorial"):FireServer() end }),
 	ActionButton(scope, { phase = phase, touch = UIS.TouchEnabled, keyboard = UIS.KeyboardEnabled,
 		onPress = function() onPress() end }),
 	ShopPanel(scope, { data = data, item = shopItem, usable = usable,
@@ -90,7 +92,6 @@ for _, child in {
 		onEquip = function(kind, id) EquipEv:FireServer(kind, id) end }),
 	CollectionPanel(scope, { data = data, open = collectionOpen }),
 	BagPanel(scope, { data = data, open = bagOpen }),
-	TutorialPanel(scope, { data = data, onSkip = function() remotes:WaitForChild("SkipTutorial"):FireServer() end }),
 } do
 	child.Parent = gui
 end

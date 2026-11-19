@@ -26,7 +26,7 @@ return function(scope)
 	local frame = W.Panel(scope, {
 		Name = "ReelBar",
 		AnchorPoint = Vector2.new(0.5, 1),
-		Position = UDim2.new(0.5, 0, 1, -24),
+		Position = UDim2.new(0.5, 0, 1, -96), -- above the Roblox hotbar
 		Size = UDim2.new(0.5, 0, 0, 64),
 		BackgroundTransparency = 0.2,
 		Visible = visible,
