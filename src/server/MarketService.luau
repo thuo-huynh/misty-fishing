@@ -23,13 +23,13 @@ local function onMarket(inst, sync, notify)
 	prompt.Triggered:Connect(function(player)
 		local total = PlayerProfile.sellBag(player, Catch.sellPrice)
 		if not total then return end
-		if total == 0 then return notify(player, "Nothing to sell.") end
-		notify(player, `Sold for {total} coins!`, GOLD)
+		if total == 0 then return notify(player, "Msg_NothingToSell") end
+		notify(player, "Msg_Sold", { coins = total }, GOLD)
 		sync(player)
 	end)
 end
 
--- syncFn(player) pushes Profile data; notifyFn(player, text, color) shows a message.
+-- syncFn(player) pushes Profile data; notifyFn(player, key, args?, color?) shows a message.
 function MarketService.start(syncFn, notifyFn)
 	for _, inst in CollectionService:GetTagged(TAG) do task.spawn(onMarket, inst, syncFn, notifyFn) end
 	CollectionService:GetInstanceAddedSignal(TAG):Connect(function(inst) onMarket(inst, syncFn, notifyFn) end)

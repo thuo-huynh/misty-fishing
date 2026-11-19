@@ -57,8 +57,9 @@ local function sync(player)
 	SyncEv:FireClient(player, d)
 end
 
-local function notify(player, text, color)
-	NotifyEv:FireClient(player, text, color)
+-- key: a text key in localization/UI.csv; the client translates it with args
+local function notify(player, key, args, color)
+	NotifyEv:FireClient(player, key, args, color)
 end
 ShopService.start(remotes, sync, notify)
 

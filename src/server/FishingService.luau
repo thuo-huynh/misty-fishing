@@ -31,8 +31,8 @@ local function zoneAt(pos)
 	return nil
 end
 
--- deps = { remotes = Folder, contentOk = boolean, notify = fn(player, text, color), sync = fn(player) }
--- Remotes: Cast (RemoteFunction, target Vector3 -> { ok, msg | zone }), Hook / Cancel (client -> server),
+-- deps = { remotes = Folder, contentOk = boolean, notify = fn(player, key, args?, color?), sync = fn(player) }
+-- Remotes: Cast (RemoteFunction, target Vector3 -> { ok, msg, args | zone }; msg is a text key), Hook / Cancel (client -> server),
 -- Reel (client -> server: holding boolean; server -> client: tension 0..1, distance studs, every reel tick),
 -- State (server -> client: "bite" | "reeling" | "idle").
 function FishingService.start(deps)
@@ -63,14 +63,14 @@ function FishingService.start(deps)
 
 	CastFn.OnServerInvoke = function(player, pos)
 		local s = session(player)
-		if not FishingSession.allow(s, os.clock()) then return { ok = false, msg = "Slow down" } end
-		if not deps.contentOk then return { ok = false, msg = "Content lỗi, xem Output" } end
+		if not FishingSession.allow(s, os.clock()) then return { ok = false, msg = "Cast_SlowDown" } end
+		if not deps.contentOk then return { ok = false, msg = "Cast_ContentError" } end
 		local d = PlayerProfile.get(player)
 		local char = player.Character
 		local hrp = char and char:FindFirstChild("HumanoidRootPart")
-		if not d or not hrp or typeof(pos) ~= "Vector3" then return { ok = false, msg = "Not ready" } end
-		if PlayerProfile.bagFull(player) then return { ok = false, msg = "Bag full! Sell your fish at the Fish Market." } end
-		local ok, msg = FishingSession.cast(s, {
+		if not d or not hrp or typeof(pos) ~= "Vector3" then return { ok = false, msg = "Cast_NotReady" } end
+		if PlayerProfile.bagFull(player) then return { ok = false, msg = "Cast_BagFull" } end
+		local ok, msg, args = FishingSession.cast(s, {
 			holdingRod = char:FindFirstChild("FishingRod") ~= nil,
 			distance = (hrp.Position - pos).Magnitude,
 			zone = zoneAt(pos) or false,
@@ -80,10 +80,10 @@ function FishingService.start(deps)
 			line = Content.lines[d.equipped.line],
 			hour = Lighting.ClockTime,
 		}, os.clock(), math.random)
-		if not ok then return { ok = false, msg = msg } end
+		if not ok then return { ok = false, msg = msg, args = args } end
 		ShopService.takeBait(player) -- tells the player when a paid Bait runs out
 		deps.sync(player)
-		return { ok = true, zone = Content.zones[s.zone].name }
+		return { ok = true, zone = s.zone }
 	end
 
 	HookEv.OnServerEvent:Connect(function(player)
@@ -102,11 +102,13 @@ function FishingService.start(deps)
 	local function landed(player, c)
 		local added, record = PlayerProfile.addCatch(player, { species = c.fish.id, kg = c.kg, zone = c.zone, time = os.time() })
 		if not added then -- safety net: casting is already refused when the bag is full
-			return deps.notify(player, "Bag full! Sell your fish first. (fish released)", Color3.fromRGB(255, 90, 90))
+			return deps.notify(player, "Msg_BagFull", nil, Color3.fromRGB(255, 90, 90))
 		end
 		local r = Content.rarities[c.fish.rarity]
-		deps.notify(player, string.format("%s %s - %.2f kg (%d coins)%s", r.name, c.fish.name, c.kg, Catch.sellPrice(c.fish, c.kg),
-			if record then "  NEW RECORD!" elseif PlayerProfile.bagFull(player) then "  Bag full!" else ""), Color3.fromRGB(table.unpack(r.color)))
+		-- shortcut: Content names go as English; key them by Content ID when names get translated
+		deps.notify(player, if record then "Msg_CaughtRecord" elseif PlayerProfile.bagFull(player) then "Msg_CaughtBagFull" else "Msg_Caught", {
+			rarity = r.name, fish = c.fish.name, kg = string.format("%.2f", c.kg), coins = Catch.sellPrice(c.fish, c.kg),
+		}, Color3.fromRGB(table.unpack(r.color)))
 		deps.sync(player)
 	end
 
@@ -130,10 +132,10 @@ function FishingService.start(deps)
 					landed(player, c)
 				elseif event == "snapped" then
 					-- the Bait was used up at the cast; a snap is where the player feels it
-					deps.notify(player, if bait.price > 0 then `Line snapped! Lost your {bait.name}.` else "Line snapped!",
+					deps.notify(player, if bait.price > 0 then "Msg_SnappedBait" else "Msg_Snapped", { bait = bait.name },
 						Color3.fromRGB(255, 90, 90))
 				else
-					deps.notify(player, if event == "missed" then "Too slow - it got away." else "The fish got away...",
+					deps.notify(player, if event == "missed" then "Msg_TooSlow" else "Msg_GotAway", nil,
 						Color3.fromRGB(255, 140, 90))
 				end
 			end
