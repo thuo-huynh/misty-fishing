@@ -79,13 +79,16 @@ Quăng cần → chờ cá cắn → giật cần → kéo cá (giữ **Tension*
 - Thả nút thì dây chùng, nhưng cá bơi ra xa.
 - Chỉ dùng một nút: chuột, chạm màn hình hoặc phím Space.
 
-### 6.4. Tackle (3 ô trang bị)
+### 6.4. Tackle (4 ô trang bị)
 - **Rod:** độ bền và may mắn (tăng tỉ lệ ra cá hiếm).
 - **Line:** độ căng tối đa.
+- **Float:** tầng nước của mồi (mặt, giữa, đáy) và độ nhạy. Thêm ở GĐ2; MVP chỉ có 3 ô.
 - **Bait:** quyết định loài nào cắn câu.
 
+Danh mục đầy đủ map, loài cá và Tackle: [content-spec.md](content-spec.md).
+
 ### 6.5. Tiến trình
-- **Level** tăng nhờ câu được cá và dùng để mở vùng mới: Lake ở level 1, River level 5, Sea level 12. Các con số sẽ chốt khi cân bằng game.
+- **Level** tăng nhờ câu được cá và dùng để mở vùng mới: Lake level 1, River 5, Swamp 10, Coast 15, Deep Sea 25. Các con số sẽ chốt khi cân bằng game.
 - **Coins** dùng mua Tackle. Muốn câu ở vùng mới cần cả Level đủ cao lẫn Tackle đủ tốt.
 
 ### 6.6. Kinh tế
@@ -112,11 +115,14 @@ Content Designer định nghĩa Zone trong `content/zones.luau` (`id`, tên, lo�
 
 | Loại | Số lượng |
 |---|---|
-| Zone | 3: Lake, River, Sea |
-| Species | khoảng 25 |
-| Rod | 4 |
-| Line | 3 |
-| Bait | 5 |
+| Zone | 5: Lake, River, Swamp, Coast, Deep Sea |
+| Species | 40 |
+| Rod | 7 |
+| Line | 5 |
+| Float | 5 |
+| Bait | 15 |
+
+Chi tiết từng món: [content-spec.md](content-spec.md).
 
 ## 8. Quy trình làm việc
 
@@ -127,7 +133,7 @@ Content Designer định nghĩa Zone trong `content/zones.luau` (`id`, tên, lo�
 4. Tạo Pull Request. GitHub tự kiểm tra lại.
 5. Programmer duyệt và gộp vào `main`, rồi đưa lên `Misty Fishing [DEV]` để test.
 
-Chi tiết từng bước có hình minh họa sẽ nằm trong `docs/content-guide.md`.
+Chi tiết từng bước: [`docs/content-guide.md`](content-guide.md).
 
 ### 8.2. Quy ước Git
 - Mỗi việc một nhánh, đặt tên theo người làm: `content/...`, `feature/...` hoặc `fix/...`.
