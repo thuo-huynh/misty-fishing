@@ -7,6 +7,9 @@
       "ContentData": { "$path": "content" }
     },
     "ServerScriptService": { "$path": "src/server" },
+    "ServerStorage": {
+      "ServerPackages": { "$path": "ServerPackages" }
+    },
     "StarterPlayer": {
       "StarterPlayerScripts": { "$path": "src/client" }
     }
