@@ -72,6 +72,14 @@ return {
 		assert(ProfileData.buy(d, c, "baits", "corn"), "phải mua được Corn")
 	end,
 
+	["chỉ bù Coins lúc vừa vào bước mua Bait, không bù lại mỗi sự kiện sau đó"] = function()
+		local c = content()
+		local d = play(c, { CAST, landed("perch"), SELL })
+		d.coins = 0
+		Tutorial.advance(d, c, { kind = "bought", item = "rods" })
+		assert(d.coins == 0, `không được bù lại, ra {d.coins}`)
+	end,
+
 	["bỏ qua ở bất kỳ bước nào thì xong luôn"] = function()
 		local c = content()
 		assert(Tutorial.done(play(c, { { kind = "skip" } })))

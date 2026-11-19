@@ -6,9 +6,12 @@ local function fixture()
 	return {
 		zones = { { id = "lake", name = "Lake", level = 1 } },
 		baits = { { id = "worm", name = "Worm", price = 0, pack = 0 } },
-		rods = { { id = "basic", name = "Basic Rod", price = 0 } },
-		lines = { { id = "basic", name = "Basic Line", price = 0 } },
-		balance = { rarities = { { id = "common", name = "Common", weight = 1 } } },
+		rods = { { id = "basic", name = "Basic Rod", price = 0, pull = 6 } },
+		lines = { { id = "basic", name = "Basic Line", price = 0, maxTension = 100 } },
+		balance = {
+			rarities = { { id = "common", name = "Common", weight = 1 } },
+			tension = { startDistance = 30, escapeDistance = 80, fleeSpeed = 2, relaxRate = 1, riseRate = 1, kgForce = 4, difficultyForce = 10, thrashSpike = 1, thrashInterval = 4 },
+		},
 		species = {
 			{ id = "perch", name = "Perch", rarity = "common", zones = { "lake" }, baits = { "worm" }, kg = { 0.1, 1 }, price = 10, model = 1 },
 		},
@@ -36,7 +39,7 @@ return {
 
 	["Content ID trùng là lỗi"] = function()
 		local c = fixture()
-		table.insert(c.rods, { id = "basic", name = "Copy", price = 5 })
+		table.insert(c.rods, { id = "basic", name = "Copy", price = 5, pull = 6 })
 		expectOne(Validator.validate(c, published()).errors, "rods: Content ID 'basic' bị trùng")
 	end,
 
@@ -75,6 +78,36 @@ return {
 			local c = fixture()
 			c[kind][1].price = -1
 			expectOne(Validator.validate(c, published()).errors, "giá âm (-1)")
+		end
+	end,
+
+	["Line có maxTension ≤ 0 hoặc thiếu là lỗi"] = function()
+		for _, v in { 0, -5, false } do
+			local c = fixture()
+			c.lines[1].maxTension = v or nil
+			expectOne(Validator.validate(c, published()).errors, "Line 'basic' có maxTension không hợp lệ")
+		end
+	end,
+
+	["Rod có pull ≤ 0 hoặc không phải số là lỗi"] = function()
+		for _, v in { 0, -1, "6" } do
+			local c = fixture()
+			c.rods[1].pull = v
+			expectOne(Validator.validate(c, published()).errors, "Rod 'basic' có pull không hợp lệ")
+		end
+	end,
+
+	["balance.tension thiếu là lỗi"] = function()
+		local c = fixture()
+		c.balance.tension = nil
+		expectOne(Validator.validate(c, published()).errors, "balance.tension bị thiếu")
+	end,
+
+	["balance.tension có trường thiếu hoặc ≤ 0 là lỗi"] = function()
+		for _, v in { 0, -1, false } do
+			local c = fixture()
+			c.balance.tension.kgForce = v or nil
+			expectOne(Validator.validate(c, published()).errors, "balance.tension.kgForce phải là số > 0")
 		end
 	end,
 

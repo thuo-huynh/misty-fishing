@@ -32,7 +32,7 @@ function Tutorial.advance(d, content, event)
 		elseif step == BUY and kind == "bought" and event.item == "baits" then CATCH_NEW
 		elseif step == CATCH_NEW and kind == "landed" and speciesCaught(d) >= 2 then DONE
 		else step
-	if next == BUY then
+	if next == BUY and step ~= BUY then
 		-- one small fish never pays for a Bait pack: top up to the cheapest paid one
 		local cheapest = math.huge
 		for _, b in content.list.baits do

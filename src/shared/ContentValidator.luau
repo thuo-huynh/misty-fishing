@@ -1,6 +1,6 @@
 -- Content Validator (spec #1): kiểm tra toàn bộ content, không phụ thuộc Roblox để chạy được cả trong Lune/CI.
 -- validate(content, published) -> { errors = {string}, warnings = {string} }
---   content: { species, zones, rods, lines, baits = {records}, balance = { rarities = {records} } }
+--   content: { species, zones, rods, lines, baits = {records}, balance = { rarities = {records}, tension = {tuning} } }
 --   published: { [kind] = {Content ID} } — content/published.luau, chỉ được thêm vào (ADR 0003)
 local ContentValidator = {}
 
@@ -33,6 +33,22 @@ function ContentValidator.validate(content, published)
 	for kind, label in { species = "Species", rods = "Rod", lines = "Line", baits = "Bait" } do
 		for _, r in lists[kind] do
 			if r.price < 0 then err(`{label} '{r.id}' có giá âm ({r.price})`) end
+		end
+	end
+
+	local function positive(v) return type(v) == "number" and v > 0 end
+	for _, l in lists.lines do
+		if not positive(l.maxTension) then err(`Line '{l.id}' có maxTension không hợp lệ ({l.maxTension}), phải là số > 0`) end
+	end
+	for _, r in lists.rods do
+		if not positive(r.pull) then err(`Rod '{r.id}' có pull không hợp lệ ({r.pull}), phải là số > 0`) end
+	end
+	local tuning = content.balance.tension
+	if type(tuning) ~= "table" then
+		err("balance.tension bị thiếu")
+	else
+		for _, f in { "startDistance", "escapeDistance", "fleeSpeed", "relaxRate", "riseRate", "kgForce", "difficultyForce", "thrashSpike", "thrashInterval" } do
+			if not positive(tuning[f]) then err(`balance.tension.{f} phải là số > 0 (đang là {tuning[f]})`) end
 		end
 	end
 

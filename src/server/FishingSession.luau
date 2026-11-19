@@ -70,7 +70,7 @@ end
 
 local RATE, BURST = 5, 10 -- client events per second, max burst
 
--- Token bucket shared by all of this player's fishing remotes; false = drop the event.
+-- Token bucket for this player's casts (the costly remote); false = drop the request.
 function FishingSession.allow(s, now)
 	s.tokens = math.min(BURST, (s.tokens or BURST) + (now - (s.tokensAt or now)) * RATE)
 	s.tokensAt = now
