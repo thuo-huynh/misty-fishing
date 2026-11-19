@@ -68,3 +68,9 @@ Stat_biteSpeed,Bite speed,,,Bite speed
 Prompt_Shop,Shop,ProximityPrompt ActionText,,Shop
 Prompt_SellFish,Sell fish,ProximityPrompt ActionText,,Sell fish
 Prompt_FishMarket,Fish Market,ProximityPrompt ObjectText,,Fish Market
+Tut_Cast,Walk onto the dock and tap the water to cast,,,Walk onto the dock and tap the water to cast
+Tut_Catch,Wait for a bite. Hook it then hold to reel it in!,,,Wait for a bite. Hook it then hold to reel it in!
+Tut_Sell,Nice catch! Sell it at the Fish Market,,,Nice catch! Sell it at the Fish Market
+Tut_Buy,Buy a new Bait at the Bait Shop,,,Buy a new Bait at the Bait Shop
+Tut_CatchNew,New Bait - new fish! Catch a different Species,,,New Bait - new fish! Catch a different Species
+Tut_Skip,Skip tutorial,,,Skip tutorial

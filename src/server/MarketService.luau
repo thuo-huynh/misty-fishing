@@ -5,6 +5,7 @@ local CollectionService = game:GetService("CollectionService")
 
 local Catch = require(RS:WaitForChild("Rules"):WaitForChild("Catch"))
 local PlayerProfile = require(script.Parent:WaitForChild("PlayerProfile"))
+local TutorialService = require(script.Parent:WaitForChild("TutorialService"))
 
 local TAG = "SellNPC"
 local GOLD = Color3.fromRGB(255, 220, 80)
@@ -25,6 +26,7 @@ local function onMarket(inst, sync, notify)
 		if not total then return end
 		if total == 0 then return notify(player, "Msg_NothingToSell") end
 		notify(player, "Msg_Sold", { coins = total }, GOLD)
+		TutorialService.event(player, "sold")
 		sync(player)
 	end)
 end

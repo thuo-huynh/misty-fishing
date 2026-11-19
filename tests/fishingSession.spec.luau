@@ -83,6 +83,13 @@ return {
 		assert(s.biteAt == 103, `biteAt {s.biteAt}`)
 	end,
 
+	["cast: req.fish ép loài và cân (lượt câu hướng dẫn), không roll"] = function()
+		local s = FishingSession.new(Catch, Tension, content)
+		local roach = content.species[2]
+		assert(FishingSession.cast(s, request({ fish = roach, kg = 0.1 }), 0, fixed(0)), "chỉ còn rng cho thời gian cắn")
+		assert(s.fish == roach and s.kg == 0.1, "phải đúng cá ép")
+	end,
+
 	["cast: mỗi người chơi chỉ một lượt câu"] = function()
 		local s = waiting()
 		local ok, msg = FishingSession.cast(s, request(), 1, fixed(0.1, 0, 0))

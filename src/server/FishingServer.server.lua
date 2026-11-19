@@ -62,6 +62,7 @@ local function notify(player, key, args, color)
 	NotifyEv:FireClient(player, key, args, color)
 end
 ShopService.start(remotes, sync, notify)
+require(script.Parent:WaitForChild("TutorialService")).start(remotes, sync)
 
 local function giveRod(player)
 	local backpack = player:WaitForChild("Backpack")

@@ -12,6 +12,7 @@ local Tension = require(RS:WaitForChild("Rules"):WaitForChild("Tension"))
 local PlayerProfile = require(script.Parent:WaitForChild("PlayerProfile"))
 local FishingSession = require(script.Parent:WaitForChild("FishingSession"))
 local ShopService = require(script.Parent:WaitForChild("ShopService"))
+local TutorialService = require(script.Parent:WaitForChild("TutorialService"))
 
 local catchContent = { species = Content.list.species, balance = Content.balance }
 local sessions = {} -- [player] = FishingSession
@@ -70,11 +71,15 @@ function FishingService.start(deps)
 		local hrp = char and char:FindFirstChild("HumanoidRootPart")
 		if not d or not hrp or typeof(pos) ~= "Vector3" then return { ok = false, msg = "Cast_NotReady" } end
 		if PlayerProfile.bagFull(player) then return { ok = false, msg = "Cast_BagFull" } end
+		local zone, bait = zoneAt(pos) or false, Content.baits[d.equipped.bait]
+		local fish, kg = TutorialService.forcedCatch(player, zone, bait)
 		local ok, msg, args = FishingSession.cast(s, {
 			holdingRod = char:FindFirstChild("FishingRod") ~= nil,
 			distance = (hrp.Position - pos).Magnitude,
-			zone = zoneAt(pos) or false,
-			bait = Content.baits[d.equipped.bait],
+			zone = zone,
+			bait = bait,
+			fish = fish,
+			kg = kg,
 			baitLeft = PlayerProfile.baitCount(player, d.equipped.bait),
 			rod = Content.rods[d.equipped.rod],
 			line = Content.lines[d.equipped.line],
@@ -82,6 +87,7 @@ function FishingService.start(deps)
 		}, os.clock(), math.random)
 		if not ok then return { ok = false, msg = msg, args = args } end
 		ShopService.takeBait(player) -- tells the player when a paid Bait runs out
+		TutorialService.event(player, "cast")
 		deps.sync(player)
 		return { ok = true, zone = s.zone }
 	end
@@ -104,6 +110,7 @@ function FishingService.start(deps)
 		if not added then -- safety net: casting is already refused when the bag is full
 			return deps.notify(player, "Msg_BagFull", nil, Color3.fromRGB(255, 90, 90))
 		end
+		TutorialService.event(player, "landed")
 		local r = Content.rarities[c.fish.rarity]
 		-- shortcut: Content names go as English; key them by Content ID when names get translated
 		deps.notify(player, if record then "Msg_CaughtRecord" elseif PlayerProfile.bagFull(player) then "Msg_CaughtBagFull" else "Msg_Caught", {
