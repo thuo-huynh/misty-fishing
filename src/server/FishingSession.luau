@@ -17,12 +17,12 @@ function FishingSession.cast(s, req, now, rng)
 	if not req.holdingRod then return false, "Cast_EquipRod" end
 	if req.distance > balance.maxCastDistance then return false, "Cast_TooFar" end
 	if not req.zone then return false, "Cast_NotWater" end
-	if req.baitLeft <= 0 then return false, "Cast_OutOfBait", { bait = req.bait.name } end
+	if req.baitLeft <= 0 then return false, "Cast_OutOfBait", { bait = { "baits", req.bait.id } } end
 	local fish, kg = req.fish, req.kg -- set for the guaranteed tutorial Catch
 	if not fish then
 		fish, kg = s.catch.roll(s.content, { zone = req.zone, bait = req.bait, rod = req.rod, hour = req.hour }, rng)
 	end
-	if not fish then return false, "Cast_NoBite", { bait = req.bait.name } end
+	if not fish then return false, "Cast_NoBite", { bait = { "baits", req.bait.id } } end
 	s.state, s.fish, s.kg, s.zone, s.bait, s.rod, s.line = "waiting", fish, kg, req.zone, req.bait, req.rod, req.line
 	s.biteAt = now + s.catch.biteDelay(balance, req.bait, rng)
 	return true

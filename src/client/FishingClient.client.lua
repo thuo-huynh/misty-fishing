@@ -73,7 +73,13 @@ local gui = scope:New "ScreenGui" {
 	Parent = player:WaitForChild("PlayerGui"),
 }
 local messageLabel, notify = Notifications(scope)
-local function showMessage(key, args, color) notify(T(key, args), color) end
+-- server args may name Content as { kind, id }: show that name in the player's language
+local function showMessage(key, args, color)
+	for k, v in args or {} do
+		if type(v) == "table" then args[k] = T(`{v[1]}_{v[2]}`, nil, Content[v[1]][v[2]].name) end
+	end
+	notify(T(key, args), color)
+end
 NotifyEv.OnClientEvent:Connect(showMessage)
 
 local reelBar, reelUI = ReelBar(scope)
@@ -103,6 +109,18 @@ SyncEv.OnClientEvent:Connect(function(d)
 end)
 -- shortcut: polls `state` instead of hooking each of its assignments; fine while there are few
 RunService.Heartbeat:Connect(function() phase:set(state) end)
+
+-- shop/market ProximityPrompts carry text keys (TextKey, ObjectKey) from the server; translate them here
+local function localizePrompt(p)
+	if not p:IsA("ProximityPrompt") or not p:GetAttribute("TextKey") then return end
+	p.ActionText = T(p:GetAttribute("TextKey"))
+	local key = p:GetAttribute("ObjectKey")
+	local kind, id = string.match(key or "", "^(%l+)_(.+)$")
+	local item = kind and Content[kind] and Content[kind][id]
+	p.ObjectText = if key then T(key, nil, item and item.name) else ""
+end
+for _, d in workspace:GetDescendants() do localizePrompt(d) end
+workspace.DescendantAdded:Connect(localizePrompt)
 
 local function make(class, props, parent)
 	local o = Instance.new(class)

@@ -63,14 +63,14 @@ return {
 			{ { holdingRod = false }, "Cast_EquipRod" },
 			{ { distance = 81 }, "Cast_TooFar" },
 			{ { zone = false }, "Cast_NotWater" }, -- false: zoneAt found no ZoneId,
-			{ { bait = baits.corn, baitLeft = 0 }, "Cast_OutOfBait", "Corn" },
-			{ { zone = "sea" }, "Cast_NoBite", "Worm" },
+			{ { bait = baits.corn, baitLeft = 0 }, "Cast_OutOfBait", "corn" },
+			{ { zone = "sea" }, "Cast_NoBite", "worm" },
 		}
 		for _, c in cases do
 			local s = FishingSession.new(Catch, Tension, content)
 			local ok, msg, args = FishingSession.cast(s, request(c[1]), 0, fixed(0.1, 0, 0))
 			assert(not ok and msg == c[2], `muốn "{c[2]}", ra {ok} "{msg}"`)
-			assert(c[3] == nil or (args and args.bait == c[3]), `{c[2]}: thiếu tên Bait`)
+			assert(c[3] == nil or (args and args.bait[1] == "baits" and args.bait[2] == c[3]), `{c[2]}: thiếu Bait (kind, id)`)
 			assert(s.state == "idle", "từ chối thì vẫn idle")
 		end
 	end,

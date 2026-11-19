@@ -115,9 +115,9 @@ function FishingService.start(deps)
 		end
 		TutorialService.event(player, "landed")
 		local r = Content.rarities[c.fish.rarity]
-		-- shortcut: Content names go as English; key them by Content ID when names get translated
+		-- Content names go as { kind, id }; the client shows them in the player's language
 		deps.notify(player, if record then "Msg_CaughtRecord" elseif PlayerProfile.bagFull(player) then "Msg_CaughtBagFull" else "Msg_Caught", {
-			rarity = r.name, fish = c.fish.name, kg = string.format("%.2f", c.kg), coins = Catch.sellPrice(c.fish, c.kg),
+			rarity = { "rarities", r.id }, fish = { "species", c.fish.id }, kg = string.format("%.2f", c.kg), coins = Catch.sellPrice(c.fish, c.kg),
 		}, Color3.fromRGB(table.unpack(r.color)))
 		deps.sync(player)
 	end
@@ -141,7 +141,7 @@ function FishingService.start(deps)
 					landed(player, c)
 				elseif event == "snapped" then
 					-- the Bait was used up at the cast; a snap is where the player feels it
-					deps.notify(player, if bait.price > 0 then "Msg_SnappedBait" else "Msg_Snapped", { bait = bait.name },
+					deps.notify(player, if bait.price > 0 then "Msg_SnappedBait" else "Msg_Snapped", { bait = { "baits", bait.id } },
 						Color3.fromRGB(255, 90, 90))
 				else
 					deps.notify(player, if event == "missed" then "Msg_TooSlow" else "Msg_GotAway", nil,

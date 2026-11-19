@@ -17,12 +17,13 @@ local ShopService = {}
 local sync, notify
 local opened = {} -- [player] = { kind, id } of the last shop prompt they triggered
 
-local function addPrompt(inst, item)
+local function addPrompt(inst, kind, id)
 	local part = if inst:IsA("Model") then inst.PrimaryPart or inst:FindFirstChildWhichIsA("BasePart", true) else inst
 	if not part then return end
 	local prompt = Instance.new("ProximityPrompt")
-	prompt.ActionText = "Shop"
-	prompt.ObjectText = item.name
+	-- text keys, translated by the client (localization/UI.csv); "<kind>_<id>" is the Content name key
+	prompt:SetAttribute("TextKey", "Prompt_Shop")
+	prompt:SetAttribute("ObjectKey", `{kind}_{id}`)
 	prompt.HoldDuration = 0.3
 	prompt.RequiresLineOfSight = false
 	prompt.Parent = part
@@ -46,7 +47,7 @@ function ShopService.start(remotes, syncFn, notifyFn)
 			local id = string.lower(inst:GetAttribute(attr) or "")
 			local item = Content[kind][id]
 			if not item or item.price == 0 then return warn(`{tag} missing valid {attr}:`, inst:GetFullName()) end
-			local prompt = addPrompt(inst, item)
+			local prompt = addPrompt(inst, kind, id)
 			if not prompt then return end
 			prompt.Triggered:Connect(function(player)
 				opened[player] = { kind = kind, id = id }
@@ -64,7 +65,7 @@ function ShopService.start(remotes, syncFn, notifyFn)
 		if ok == nil then return end
 		if not ok then return notify(player, if why == "coins" then "Msg_NotEnoughCoins" else "Msg_CantBuy", nil, RED) end
 		local item = Content[kind][id]
-		notify(player, if kind == "baits" then "Msg_Bought" else "Msg_Equipped", { count = item.pack, name = item.name }, BLUE)
+		notify(player, if kind == "baits" then "Msg_Bought" else "Msg_Equipped", { count = item.pack, name = { kind, id } }, BLUE)
 		TutorialService.event(player, "bought", kind)
 		sync(player)
 	end)
@@ -81,7 +82,7 @@ end
 function ShopService.takeBait(player)
 	local bait, ranOut = PlayerProfile.takeBait(player)
 	if ranOut then
-		notify(player, "Msg_BaitRanOut", { bait = bait.name, next = Content.baits[PlayerProfile.get(player).equipped.bait].name }, RED)
+		notify(player, "Msg_BaitRanOut", { bait = { "baits", bait.id }, next = { "baits", PlayerProfile.get(player).equipped.bait } }, RED)
 	end
 	return bait
 end
