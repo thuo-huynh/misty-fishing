@@ -72,12 +72,14 @@ function ProfileData.equip(d, content, kind, id)
 	return ok
 end
 
--- Rod/Line: buy once (already owned = just equip). Bait: buy one pack. Equips on success; false if unaffordable.
+-- Rod/Line: buy once (already owned = just equip). Bait: buy one pack. Equips on success.
+-- Returns true, or false and why: "invalid" (unknown ID / free Bait) | "coins" (not enough Coins).
 function ProfileData.buy(d, content, kind, id)
 	local item = content[kind][id]
-	if not item or (kind == "baits" and item.price == 0) then return false end
+	if not item or (kind == "baits" and item.price == 0) then return false, "invalid" end
 	if kind ~= "baits" and ProfileData.owns(d, content, kind, id) then return ProfileData.equip(d, content, kind, id) end
-	if d.coins < item.price then return false end
+	-- shortcut: Tackle content has no `level` field yet, so no Level check; add `false, "level"` here when it does
+	if d.coins < item.price then return false, "coins" end
 	d.coins -= item.price
 	if kind == "baits" then
 		d.baits[id] = (d.baits[id] or 0) + item.pack
@@ -87,15 +89,18 @@ function ProfileData.buy(d, content, kind, id)
 	return ProfileData.equip(d, content, kind, id)
 end
 
--- Use one of the equipped Bait (always valid after reconcile) and return its record;
--- re-equips the free Bait when a paid one runs out.
+-- Use one of the equipped Bait (always valid after reconcile) and return its record, and true when
+-- that was the last paid one (the free Bait is then re-equipped).
 function ProfileData.takeBait(d, content)
 	local bait = content.baits[d.equipped.bait]
 	if bait.price > 0 then
 		d.baits[bait.id] -= 1
-		if d.baits[bait.id] <= 0 then d.equipped.bait = firstFree(content.list.baits) end
+		if d.baits[bait.id] <= 0 then
+			d.equipped.bait = firstFree(content.list.baits)
+			return bait, true
+		end
 	end
-	return bait
+	return bait, false
 end
 
 -- catch = { species, kg, zone, time }. Returns false when the bag is full, else true and whether it is a new record.

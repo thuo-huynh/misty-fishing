@@ -10,6 +10,7 @@ local Content = require(RS:WaitForChild("Content"))
 local Catch = require(RS:WaitForChild("Rules"):WaitForChild("Catch"))
 local PlayerProfile = require(script.Parent:WaitForChild("PlayerProfile"))
 local FishingSession = require(script.Parent:WaitForChild("FishingSession"))
+local ShopService = require(script.Parent:WaitForChild("ShopService"))
 
 local catchContent = { species = Content.list.species, balance = Content.balance }
 local sessions = {} -- [player] = FishingSession
@@ -76,7 +77,7 @@ function FishingService.start(deps)
 			hour = Lighting.ClockTime,
 		}, os.clock(), math.random)
 		if not ok then return { ok = false, msg = msg } end
-		PlayerProfile.takeBait(player)
+		ShopService.takeBait(player) -- tells the player when a paid Bait runs out
 		deps.sync(player)
 		return { ok = true, zone = Content.zones[s.zone].name }
 	end

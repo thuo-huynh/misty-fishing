@@ -32,6 +32,7 @@ end
 local Content = require(RS:WaitForChild("Content"))
 local PlayerProfile = require(script.Parent:WaitForChild("PlayerProfile"))
 local FishingService = require(script.Parent:WaitForChild("FishingService"))
+local ShopService = require(script.Parent:WaitForChild("ShopService"))
 local Balance = Content.balance
 
 local remotes = Instance.new("Folder")
@@ -42,7 +43,6 @@ local function remote(class, name)
 	r.Parent = remotes
 	return r
 end
-local EquipBaitEv = remote("RemoteEvent", "EquipBait")
 local SyncEv = remote("RemoteEvent", "Sync")
 local NotifyEv = remote("RemoteEvent", "Notify")
 remotes.Parent = RS
@@ -59,6 +59,7 @@ end
 local function notify(player, text, color)
 	NotifyEv:FireClient(player, text, color)
 end
+ShopService.start(remotes, sync, notify)
 
 local function giveRod(player)
 	local backpack = player:WaitForChild("Backpack")
@@ -124,11 +125,6 @@ end)
 ---------------------------------------------------------------- fishing (#9: FishingService)
 FishingService.start({ remotes = remotes, contentOk = contentOk, notify = notify, sync = sync })
 
-EquipBaitEv.OnServerEvent:Connect(function(player, baitId)
-	if typeof(baitId) ~= "string" then return end
-	if PlayerProfile.equip(player, "baits", baitId) then sync(player) end
-end)
-
 ---------------------------------------------------------------- shops (ProximityPrompts, all server-side)
 local function promptOn(inst, actionText, objectText)
 	local parent = inst
@@ -156,36 +152,6 @@ onTagged("SellNPC", function(inst)
 		if not total then return end
 		if total == 0 then return notify(player, "Nothing to sell.") end
 		notify(player, string.format("Sold for %d coins!", total), Color3.fromRGB(255, 220, 80))
-		sync(player)
-	end)
-end)
-
-onTagged("RodShop", function(inst)
-	local rodId = string.lower(inst:GetAttribute("RodId") or "")
-	local rod = Content.rods[rodId]
-	if not rod then return warn("RodShop missing valid RodId:", inst:GetFullName()) end
-	local prompt = promptOn(inst, string.format("Buy / equip (%d)", rod.price), rod.name)
-	if not prompt then return end
-	prompt.Triggered:Connect(function(player)
-		local ok = PlayerProfile.buy(player, "rods", rodId)
-		if ok == nil then return end
-		if not ok then return notify(player, "Not enough coins.", Color3.fromRGB(255, 90, 90)) end
-		notify(player, "Equipped " .. rod.name, Color3.fromRGB(120, 220, 255))
-		sync(player)
-	end)
-end)
-
-onTagged("BaitShop", function(inst)
-	local baitId = string.lower(inst:GetAttribute("BaitId") or "")
-	local bait = Content.baits[baitId]
-	if not bait or bait.price == 0 then return warn("BaitShop missing valid BaitId:", inst:GetFullName()) end
-	local prompt = promptOn(inst, string.format("Buy %d (%d)", bait.pack, bait.price), bait.name)
-	if not prompt then return end
-	prompt.Triggered:Connect(function(player)
-		local ok = PlayerProfile.buy(player, "baits", baitId)
-		if ok == nil then return end
-		if not ok then return notify(player, "Not enough coins.", Color3.fromRGB(255, 90, 90)) end
-		notify(player, string.format("Bought %d %s", bait.pack, bait.name), Color3.fromRGB(120, 220, 255))
 		sync(player)
 	end)
 end)
