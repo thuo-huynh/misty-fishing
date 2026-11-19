@@ -50,6 +50,7 @@ function FishingService.start(deps)
 	local StateEv = remote("RemoteEvent", "State")
 
 	local function session(player)
+		if not player.Parent then return nil end -- left: PlayerRemoving already dropped the session
 		sessions[player] = sessions[player] or FishingSession.new(Catch, Tension, catchContent)
 		return sessions[player]
 	end
@@ -64,6 +65,7 @@ function FishingService.start(deps)
 
 	CastFn.OnServerInvoke = function(player, pos)
 		local s = session(player)
+		if not s then return { ok = false, msg = "Cast_NotReady" } end
 		if not FishingSession.allow(s, os.clock()) then return { ok = false, msg = "Cast_SlowDown" } end
 		if not deps.contentOk then return { ok = false, msg = "Cast_ContentError" } end
 		local d = PlayerProfile.get(player)
@@ -92,16 +94,17 @@ function FishingService.start(deps)
 		return { ok = true, zone = s.zone }
 	end
 
+	-- Hook, Reel and Cancel skip the rate limit: a dropped one desyncs client and server, and each is a cheap guarded state change
 	HookEv.OnServerEvent:Connect(function(player)
 		local s = sessions[player]
-		if not s or not FishingSession.allow(s, os.clock()) then return end
+		if not s then return end
 		if not FishingSession.hook(s, os.clock(), math.random) then return end -- too early or too late: update() handles the miss
 		StateEv:FireClient(player, "reeling")
 	end)
 
 	ReelEv.OnServerEvent:Connect(function(player, holding)
 		local s = sessions[player]
-		if not s or s.state ~= "reeling" or not FishingSession.allow(s, os.clock()) then return end
+		if not s or s.state ~= "reeling" then return end
 		FishingSession.reel(s, holding)
 	end)
 
@@ -120,8 +123,7 @@ function FishingService.start(deps)
 	end
 
 	CancelEv.OnServerEvent:Connect(function(player)
-		local s = sessions[player]
-		if s and FishingSession.allow(s, os.clock()) then cancel(player) end
+		cancel(player)
 	end)
 
 	RunService.Heartbeat:Connect(function()

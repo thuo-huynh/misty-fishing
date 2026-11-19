@@ -2,6 +2,7 @@
 local Players = game:GetService("Players")
 local RS = game:GetService("ReplicatedStorage")
 local UIS = game:GetService("UserInputService")
+local CAS = game:GetService("ContextActionService")
 local RunService = game:GetService("RunService")
 local CollectionService = game:GetService("CollectionService")
 
@@ -122,6 +123,7 @@ local function cleanup()
 		cast = nil
 	end
 	reelUI.hide()
+	CAS:UnbindAction("ReelSpace")
 	holding = false
 	state = "idle"
 end
@@ -154,6 +156,12 @@ local function setHolding(h)
 	if state ~= "reeling" or h == holding then return end
 	holding = h
 	ReelEv:FireServer(h)
+end
+
+-- while reeling, Space reels instead of jumping: sink it above the default jump binding
+local function reelSpace(_, inputState)
+	setHolding(inputState == Enum.UserInputState.Begin)
+	return Enum.ContextActionResult.Sink
 end
 
 RunService.RenderStepped:Connect(function(dt)
@@ -198,6 +206,7 @@ StateEv.OnClientEvent:Connect(function(newState)
 		showMessage("Msg_Bite", nil, Color3.fromRGB(255, 230, 60))
 	elseif newState == "reeling" then
 		startReel()
+		CAS:BindActionAtPriority("ReelSpace", reelSpace, false, Enum.ContextActionPriority.High.Value, Enum.KeyCode.Space)
 	elseif newState == "idle" then
 		cleanup()
 	end
