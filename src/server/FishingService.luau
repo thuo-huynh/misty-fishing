@@ -30,8 +30,8 @@ local function zoneAt(pos)
 	return nil
 end
 
--- deps = { remotes = Folder, contentOk = boolean, notify = fn(player, text, color), sync = fn(player) }
--- Remotes: Cast (RemoteFunction, target Vector3 -> { ok, msg | zone }), Hook / Reel(success) / Cancel (client -> server),
+-- deps = { remotes = Folder, contentOk = boolean, notify = fn(player, key, args?, color?), sync = fn(player) }
+-- Remotes: Cast (RemoteFunction, target Vector3 -> { ok, msg, args | zone }; msg is a text key), Hook / Reel(success) / Cancel (client -> server),
 -- State (server -> client: "bite" | "reeling", difficulty | "idle").
 function FishingService.start(deps)
 	local function remote(class, name)
@@ -61,13 +61,13 @@ function FishingService.start(deps)
 
 	CastFn.OnServerInvoke = function(player, pos)
 		local s = session(player)
-		if not FishingSession.allow(s, os.clock()) then return { ok = false, msg = "Slow down" } end
-		if not deps.contentOk then return { ok = false, msg = "Content lỗi, xem Output" } end
+		if not FishingSession.allow(s, os.clock()) then return { ok = false, msg = "Cast_SlowDown" } end
+		if not deps.contentOk then return { ok = false, msg = "Cast_ContentError" } end
 		local d = PlayerProfile.get(player)
 		local char = player.Character
 		local hrp = char and char:FindFirstChild("HumanoidRootPart")
-		if not d or not hrp or typeof(pos) ~= "Vector3" then return { ok = false, msg = "Not ready" } end
-		local ok, msg = FishingSession.cast(s, {
+		if not d or not hrp or typeof(pos) ~= "Vector3" then return { ok = false, msg = "Cast_NotReady" } end
+		local ok, msg, args = FishingSession.cast(s, {
 			holdingRod = char:FindFirstChild("FishingRod") ~= nil,
 			distance = (hrp.Position - pos).Magnitude,
 			zone = zoneAt(pos) or false,
@@ -76,10 +76,10 @@ function FishingService.start(deps)
 			rod = Content.rods[d.equipped.rod],
 			hour = Lighting.ClockTime,
 		}, os.clock(), math.random)
-		if not ok then return { ok = false, msg = msg } end
+		if not ok then return { ok = false, msg = msg, args = args } end
 		ShopService.takeBait(player) -- tells the player when a paid Bait runs out
 		deps.sync(player)
-		return { ok = true, zone = Content.zones[s.zone].name }
+		return { ok = true, zone = s.zone }
 	end
 
 	HookEv.OnServerEvent:Connect(function(player)
@@ -96,14 +96,16 @@ function FishingService.start(deps)
 		local s = sessions[player]
 		if not s or s.state ~= "reeling" or not FishingSession.allow(s, os.clock()) then return end
 		local c = FishingSession.finishReel(s, os.clock(), success)
-		if not c then return deps.notify(player, "The fish got away...", Color3.fromRGB(255, 140, 90)) end
+		if not c then return deps.notify(player, "Msg_GotAway", nil, Color3.fromRGB(255, 140, 90)) end
 		local added, record = PlayerProfile.addCatch(player, { species = c.fish.id, kg = c.kg, zone = c.zone, time = os.time() })
 		if not added then
-			return deps.notify(player, "Bag full! Sell your fish first. (fish released)", Color3.fromRGB(255, 90, 90))
+			return deps.notify(player, "Msg_BagFull", nil, Color3.fromRGB(255, 90, 90))
 		end
 		local r = Content.rarities[c.fish.rarity]
-		deps.notify(player, string.format("%s %s - %.2f kg (%d coins)%s", r.name, c.fish.name, c.kg, Catch.sellPrice(c.fish, c.kg),
-			record and "  NEW RECORD!" or ""), Color3.fromRGB(table.unpack(r.color)))
+		-- shortcut: Content names go as English; key them by Content ID when names get translated
+		deps.notify(player, if record then "Msg_CaughtRecord" else "Msg_Caught", {
+			rarity = r.name, fish = c.fish.name, kg = string.format("%.2f", c.kg), coins = Catch.sellPrice(c.fish, c.kg),
+		}, Color3.fromRGB(table.unpack(r.color)))
 		deps.sync(player)
 	end)
 
@@ -120,7 +122,7 @@ function FishingService.start(deps)
 				StateEv:FireClient(player, "bite")
 			elseif event == "escaped" then
 				StateEv:FireClient(player, "idle")
-				deps.notify(player, "Too slow - it got away.", Color3.fromRGB(255, 140, 90))
+				deps.notify(player, "Msg_TooSlow", nil, Color3.fromRGB(255, 140, 90))
 			end
 		end
 	end)

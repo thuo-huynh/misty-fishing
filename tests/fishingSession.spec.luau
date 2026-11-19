@@ -37,16 +37,17 @@ end
 return {
 	["cast: từ chối và báo lý do khi không quăng được"] = function()
 		local cases = {
-			{ { holdingRod = false }, "Equip your rod first" },
-			{ { distance = 81 }, "Too far!" },
-			{ { zone = false }, "Cast into the water" }, -- false: zoneAt found no ZoneId,
-			{ { bait = baits.corn, baitLeft = 0 }, "Out of Corn" },
-			{ { zone = "sea" }, "Nothing bites Worm here. Try another bait." },
+			{ { holdingRod = false }, "Cast_EquipRod" },
+			{ { distance = 81 }, "Cast_TooFar" },
+			{ { zone = false }, "Cast_NotWater" }, -- false: zoneAt found no ZoneId,
+			{ { bait = baits.corn, baitLeft = 0 }, "Cast_OutOfBait", "Corn" },
+			{ { zone = "sea" }, "Cast_NoBite", "Worm" },
 		}
 		for _, c in cases do
 			local s = FishingSession.new(Catch, content)
-			local ok, msg = FishingSession.cast(s, request(c[1]), 0, fixed(0.1, 0, 0))
+			local ok, msg, args = FishingSession.cast(s, request(c[1]), 0, fixed(0.1, 0, 0))
 			assert(not ok and msg == c[2], `muốn "{c[2]}", ra {ok} "{msg}"`)
+			assert(c[3] == nil or (args and args.bait == c[3]), `{c[2]}: thiếu tên Bait`)
 			assert(s.state == "idle", "từ chối thì vẫn idle")
 		end
 	end,
@@ -62,7 +63,7 @@ return {
 	["cast: mỗi người chơi chỉ một lượt câu"] = function()
 		local s = waiting()
 		local ok, msg = FishingSession.cast(s, request(), 1, fixed(0.1, 0, 0))
-		assert(not ok and msg == "Already fishing", msg)
+		assert(not ok and msg == "Cast_AlreadyFishing", msg)
 	end,
 
 	["update: cá cắn đúng lúc, giật trong hookWindow thì sang reeling"] = function()

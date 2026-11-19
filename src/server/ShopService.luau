@@ -28,7 +28,7 @@ local function addPrompt(inst, item)
 	return prompt
 end
 
--- remotes: the FishingRemotes folder. syncFn(player) pushes Profile data; notifyFn(player, text, color) shows a message.
+-- remotes: the FishingRemotes folder. syncFn(player) pushes Profile data; notifyFn(player, key, args?, color?) shows a message.
 function ShopService.start(remotes, syncFn, notifyFn)
 	sync, notify = syncFn, notifyFn
 	local function remote(name)
@@ -61,9 +61,9 @@ function ShopService.start(remotes, syncFn, notifyFn)
 		if not shop or shop.kind ~= kind or shop.id ~= id then return end
 		local ok, why = PlayerProfile.buy(player, kind, id)
 		if ok == nil then return end
-		if not ok then return notify(player, if why == "coins" then "Not enough coins." else "Can't buy that.", RED) end
+		if not ok then return notify(player, if why == "coins" then "Msg_NotEnoughCoins" else "Msg_CantBuy", nil, RED) end
 		local item = Content[kind][id]
-		notify(player, if kind == "baits" then `Bought {item.pack} {item.name}` else `Equipped {item.name}`, BLUE)
+		notify(player, if kind == "baits" then "Msg_Bought" else "Msg_Equipped", { count = item.pack, name = item.name }, BLUE)
 		sync(player)
 	end)
 
@@ -79,7 +79,7 @@ end
 function ShopService.takeBait(player)
 	local bait, ranOut = PlayerProfile.takeBait(player)
 	if ranOut then
-		notify(player, `Out of {bait.name}! Switched to {Content.baits[PlayerProfile.get(player).equipped.bait].name}.`, RED)
+		notify(player, "Msg_BaitRanOut", { bait = bait.name, next = Content.baits[PlayerProfile.get(player).equipped.bait].name }, RED)
 	end
 	return bait
 end

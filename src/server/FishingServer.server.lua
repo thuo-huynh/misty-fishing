@@ -56,8 +56,9 @@ local function sync(player)
 	SyncEv:FireClient(player, d)
 end
 
-local function notify(player, text, color)
-	NotifyEv:FireClient(player, text, color)
+-- key: a text key in localization/UI.csv; the client translates it with args
+local function notify(player, key, args, color)
+	NotifyEv:FireClient(player, key, args, color)
 end
 ShopService.start(remotes, sync, notify)
 
@@ -150,8 +151,8 @@ onTagged("SellNPC", function(inst)
 	prompt.Triggered:Connect(function(player)
 		local total = PlayerProfile.sellBag(player)
 		if not total then return end
-		if total == 0 then return notify(player, "Nothing to sell.") end
-		notify(player, string.format("Sold for %d coins!", total), Color3.fromRGB(255, 220, 80))
+		if total == 0 then return notify(player, "Msg_NothingToSell") end
+		notify(player, "Msg_Sold", { coins = total }, Color3.fromRGB(255, 220, 80))
 		sync(player)
 	end)
 end)

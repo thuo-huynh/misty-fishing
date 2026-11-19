@@ -4,8 +4,10 @@
     "$className": "DataModel",
     "ReplicatedStorage": {
       "$path": "src/shared",
-      "ContentData": { "$path": "content" }
+      "ContentData": { "$path": "content" },
+      "Packages": { "$path": "Packages" }
     },
+    "LocalizationService": { "$path": "localization" },
     "ServerScriptService": { "$path": "src/server" },
     "ServerStorage": {
       "ServerPackages": { "$path": "ServerPackages" }

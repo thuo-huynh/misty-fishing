@@ -1,0 +1,61 @@
+Key,Source,Context,Example,en
+Hud_Coins,Coins: {coins},,Coins: 120,Coins: {coins}
+Hud_Bag,Bag: {count}/{size},,Bag: 3/10,Bag: {count}/{size}
+Hud_Time,Time: {time},,Time: 14:05,Time: {time}
+Hud_TimeNight,Time: {time} (night),,Time: 21:30 (night),Time: {time} (night)
+Hud_Rod,Rod: {name},,Rod: Basic Rod,Rod: {name}
+Hud_Line,Line: {name},,Line: Basic Line,Line: {name}
+Hud_Bait,Bait: {name},,Bait: Worm,Bait: {name}
+Hud_BaitCount,Bait: {name} x{count},,Bait: Corn x5,Bait: {name} x{count}
+Hud_Collection,Collection,,,Collection
+Action_Cast,Cast,,,Cast
+Action_ReelIn,Reel in,,,Reel in
+Action_Hook,Hook!,,,Hook!
+Action_Reel,Reel!,,,Reel!
+Msg_AimAtWater,Aim at the water to cast,,,Aim at the water to cast
+Msg_CastFailed,Cast failed,,,Cast failed
+Msg_Waiting,Waiting for a bite... ({zone}),,Waiting for a bite... (Lake),Waiting for a bite... ({zone})
+Msg_Bite,BITE! Hook it now!,,,BITE! Hook it now!
+Msg_Hooked,Hooked! Reel it in!,,,Hooked! Reel it in!
+Msg_GotAway,The fish got away...,,,The fish got away...
+Msg_TooSlow,Too slow - it got away.,,,Too slow - it got away.
+Msg_BagFull,Bag full! Sell your fish first. (fish released),,,Bag full! Sell your fish first. (fish released)
+Msg_Caught,{rarity} {fish} - {kg} kg ({coins} coins),,Rare Perch - 1.20 kg (35 coins),{rarity} {fish} - {kg} kg ({coins} coins)
+Msg_CaughtRecord,{rarity} {fish} - {kg} kg ({coins} coins)  NEW RECORD!,,,{rarity} {fish} - {kg} kg ({coins} coins)  NEW RECORD!
+Msg_NothingToSell,Nothing to sell.,,,Nothing to sell.
+Msg_Sold,Sold for {coins} coins!,,Sold for 80 coins!,Sold for {coins} coins!
+Msg_NotEnoughCoins,Not enough coins.,,,Not enough coins.
+Msg_CantBuy,Can't buy that.,,,Can't buy that.
+Msg_Bought,Bought {count} {name},,Bought 10 Corn,Bought {count} {name}
+Msg_Equipped,Equipped {name},,Equipped Carbon Rod,Equipped {name}
+Msg_BaitRanOut,Out of {bait}! Switched to {next}.,,Out of Corn! Switched to Worm.,Out of {bait}! Switched to {next}.
+Cast_SlowDown,Slow down,,,Slow down
+Cast_ContentError,Content error - see Output,,,Content error - see Output
+Cast_NotReady,Not ready,,,Not ready
+Cast_AlreadyFishing,Already fishing,,,Already fishing
+Cast_EquipRod,Equip your rod first,,,Equip your rod first
+Cast_TooFar,Too far!,,,Too far!
+Cast_NotWater,Cast into the water,,,Cast into the water
+Cast_OutOfBait,Out of {bait},,Out of Corn,Out of {bait}
+Cast_NoBite,Nothing bites {bait} here. Try another bait.,,,Nothing bites {bait} here. Try another bait.
+Coll_Title,Fish Collection {caught}/{total},,Fish Collection 3/8,Fish Collection {caught}/{total}
+Coll_Caught,{name}  [{rarity}]  x{count}  best {kg} kg,,,{name}  [{rarity}]  x{count}  best {kg} kg
+Coll_CaughtNight,{name}  [{rarity}]  x{count}  best {kg} kg  (night),,,{name}  [{rarity}]  x{count}  best {kg} kg  (night)
+Coll_Unknown,???  [{rarity}]  {zone},,???  [Rare]  Lake,???  [{rarity}]  {zone}
+Shop_Title,{name} - {price} coins,,Carbon Rod - 250 coins,{name} - {price} coins
+Shop_TitlePack,{name} - {price} coins / {pack},,Corn - 20 coins / 10,{name} - {price} coins / {pack}
+Shop_Stat,{stat}: {value}  (equipped {equipped}  {delta}),,Power: 0.3  (equipped 0.25  +0.05),{stat}: {value}  (equipped {equipped}  {delta})
+Shop_Have,You have: {count},,,You have: {count}
+Shop_Buy,Buy ({price}),,,Buy ({price})
+Shop_BuyPack,Buy {pack} ({price}),,,Buy {pack} ({price})
+Shop_Equip,Equip,,,Equip
+Shop_Close,Close,,,Close
+Stat_power,Power,,,Power
+Stat_luck,Luck,,,Luck
+Stat_maxKg,Max kg,,,Max kg
+Stat_pull,Pull,,,Pull
+Stat_maxTension,Max tension,,,Max tension
+Stat_biteSpeed,Bite speed,,,Bite speed
+Prompt_Shop,Shop,ProximityPrompt ActionText,,Shop
+Prompt_SellFish,Sell fish,ProximityPrompt ActionText,,Sell fish
+Prompt_FishMarket,Fish Market,ProximityPrompt ObjectText,,Fish Market

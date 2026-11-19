@@ -18,8 +18,12 @@ Single-context: một `GLOSSARY.md` và `docs/adr/` ở thư mục gốc. Xem `d
 
 ## Packages
 
-Thư viện ngoài (ProfileStore) cài bằng Wally, khai báo trong `wally.toml`. Thư mục `Packages/`, `ServerPackages/` không commit: chạy `wally install` sau khi clone, trước `rojo serve`/`rojo build`. Module thuần (được test bằng Lune) không được require package.
+Thư viện ngoài (ProfileStore, Fusion cho UI) cài bằng Wally, khai báo trong `wally.toml`. Thư mục `Packages/`, `ServerPackages/` không commit: chạy `wally install` sau khi clone, trước `rojo serve`/`rojo build`. Module thuần (được test bằng Lune) không được require package.
 
 ## Tests
 
 Test Luau chạy ngoài Studio bằng Lune (cài qua Rokit: `rokit install`). Chạy toàn bộ: `lune run tests/run`. Mỗi file `tests/**/*.spec.luau` trả về bảng `{ ["tên test"] = function() ... end }`; test hỏng khi hàm ném lỗi (`assert`/`error`). Runner tự tìm mọi file `.spec.luau` (kể cả thư mục con) và thoát mã 1 khi có test hỏng. Xem `tests/sample.spec.luau` làm khuôn. CI (`.github/workflows/tests.yml`) chạy lệnh này trên mỗi PR vào `main` và mỗi push lên `mvp`.
+
+## UI và chữ hiển thị
+
+UI client dựng bằng Fusion, mỗi phần một ModuleScript trong `src/client/UI/`. Mọi chữ hiển thị đi qua `T(key, args)` (`src/client/UI/T.luau`, logic thuần ở `src/shared/Text.luau`) với key trong `localization/UI.csv` (Rojo biến thành LocalizationTable "UI"). Server gửi key + args, không gửi câu chữ. Thêm key mới thì thêm dòng vào CSV; `tests/localization.spec.luau` bắt key thiếu. Không dùng dấu phẩy trong chữ của CSV.
